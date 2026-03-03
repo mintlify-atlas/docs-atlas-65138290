@@ -1,0 +1,370 @@
+---
+title: Algebraic data types
+description: Learn about sum types, product types, and how to combine them to model complex data in Elara
+---
+
+Algebraic data types (ADTs) are Elara's primary mechanism for defining custom types. They come in two forms: sum types (discriminated unions) and product types (records).
+
+## Sum types
+
+Sum types represent a choice between multiple alternatives, each with its own constructor:
+
+```elara
+type Animal = Cat | Dog
+
+type Bool = True | False
+
+type Ordering = LT | EQ | GT
+```
+
+### Constructors with parameters
+
+Constructors can carry data:
+
+```elara
+type Option a
+    = Some a
+    | None
+
+type RequestState
+    = Connected String
+    | Pending
+    | Failed Error
+```
+
+From the examples:
+
+```elara
+type Shape =
+    Circle Int
+    | Rectangle Int Int
+    | Square Int
+```
+
+<Note>
+  Each constructor can have a different number and type of parameters, providing maximum flexibility.
+</Note>
+
+### Using sum types
+
+Sum types are used with pattern matching:
+
+```elara
+def area : Shape -> Int
+let area shape =
+    match shape with
+        Circle r -> 3 * r * r
+        Rectangle w h -> w * h
+        Square s -> s * s
+
+let main =
+    let c = Circle 5
+    let r = Rectangle 4 6
+    let s = Square 3
+    println ("Area of Circle: " ++ toString (area c))
+```
+
+## Product types (records)
+
+Records are first-class types with named fields:
+
+```elara
+-- Record type
+type alias Person = {
+    name : String,
+    age : Int
+}
+
+-- Creating a record
+def person : Person
+let person = { name = "Bob", age = 20 }
+```
+
+<Info>
+  Records use `:` in type definitions and `=` when creating values.
+</Info>
+
+### Anonymous records
+
+Records don't require type aliases:
+
+```elara
+def point : { x: Int, y: Int }
+let point = { x = 10, y = 20 }
+
+def coordinates : { latitude: Float, longitude: Float }
+let coordinates = { latitude = 40.7128, longitude = -74.0060 }
+```
+
+## Type aliases
+
+Create named types for existing types:
+
+```elara
+type alias Name = String
+
+type alias Age = Int
+
+type alias Pair a b = (a, b)
+```
+
+From the examples:
+
+```elara
+type Number = Int
+
+def assertNumber : Int -> Number
+let assertNumber n = n
+
+type Identity s = s
+
+def makeIdentity : a -> Identity a
+let makeIdentity x = x
+```
+
+### Recursive aliases
+
+Type aliases can be recursive:
+
+```elara
+type Person = { name: String, children: [Person] }
+
+def child : Person
+let child = { name = "Bob", children = [] }
+
+def parent : Person
+let parent = { name = "Alice", children = [child] }
+```
+
+<Warning>
+  Recursive aliases are not simple synonyms—they create distinct recursive types.
+</Warning>
+
+## Combining sum and product types
+
+The real power comes from combining both:
+
+### Option type
+
+```elara
+type Option a = Some a | None
+
+def safeDiv : Int -> Int -> Option Int
+let safeDiv x y =
+    if y == 0 then
+        None
+    else
+        Some (x / y)
+```
+
+### Result type
+
+```elara
+type Result e a
+    = Ok a
+    | Err e
+
+def parseInt : String -> Result String Int
+let parseInt str = ...
+```
+
+### Complex nested structures
+
+From the specification:
+
+```elara
+type JSONElement
+    = JSONString String
+    | JSONNumber Int
+    | JSONNull
+    | JSONArray [JSONElement]
+    | JSONObject [{
+        key : String,
+        value : JSONElement
+    }]
+
+def jsonObj : JSONElement
+let jsonObj =
+    JSONObject
+        [ { key = "foo", value = JSONNumber 1 }
+        , { key = "bar", value = JSONObject [
+            { key = "baz", value = JSONString "hello" }
+          ]}
+        ]
+```
+
+## Recursive data types
+
+ADTs can reference themselves:
+
+```elara
+type List a = Nil | Cons a (List a)
+
+type Tree a
+    = Leaf a
+    | Branch (Tree a) (Tree a)
+```
+
+<Info>
+  Recursive types are essential for defining data structures like lists, trees, and graphs.
+</Info>
+
+## Higher-kinded types
+
+Types can take type constructors as parameters:
+
+```elara
+type Fix f = Fix (f (Fix f))
+```
+
+This defines the fixed point of a functor, useful for recursive data structures.
+
+## Parameterized types
+
+Types can have multiple type parameters:
+
+```elara
+type Either a b
+    = Left a
+    | Right b
+
+type Pair a b = { first: a, second: b }
+
+type Map k v = ...
+```
+
+From the standard library:
+
+```elara
+type Tuple2 a b = Tuple2 a b
+
+def zip : List a -> List b -> List (Tuple2 a b)
+let zip l1 l2 =
+    match (l1, l2) with
+        (Nil, _) -> Nil
+        (_, Nil) -> Nil
+        (Cons x xs, Cons y ys) -> Cons (x, y) (zip xs ys)
+```
+
+## Pattern matching on ADTs
+
+ADTs are consumed through pattern matching:
+
+```elara
+def isSome : Option a -> Bool
+let isSome opt =
+    match opt with
+        Some _ -> True
+        None -> False
+
+def map : (a -> b) -> Option a -> Option b
+let map f opt =
+    match opt with
+        None -> None
+        Some x -> Some (f x)
+```
+
+### Nested pattern matching
+
+```elara
+def describe : Option (List Int) -> String
+let describe opt =
+    match opt with
+        None -> "nothing"
+        Some [] -> "empty list"
+        Some (x :: xs) -> "list starting with " ++ toString x
+```
+
+## Single-constructor optimization
+
+Types with a single constructor can be optimized:
+
+```elara
+-- This type
+type Box a = Box a
+
+-- Can be treated as
+type Box a = a
+```
+
+The compiler eliminates the constructor wrapper for performance.
+
+<Note>
+  Single-constructor ADTs are useful for creating distinct types with custom type class instances without runtime overhead.
+</Note>
+
+## Practical examples
+
+### Modeling state machines
+
+```elara
+type ConnectionState
+    = Disconnected
+    | Connecting { host: String, port: Int }
+    | Connected { socket: Socket }
+    | Failed { error: String }
+
+def handleState : ConnectionState -> IO ()
+let handleState state =
+    match state with
+        Disconnected -> println "Not connected"
+        Connecting { host, port } -> 
+            println ("Connecting to " ++ host ++ ":" ++ toString port)
+        Connected _ -> println "Connected"
+        Failed { error } -> println ("Error: " ++ error)
+```
+
+### Modeling trees
+
+```elara
+type Tree a
+    = Empty
+    | Node { value: a, left: Tree a, right: Tree a }
+
+def insert : Int -> Tree Int -> Tree Int
+let insert x tree =
+    match tree with
+        Empty -> Node { value = x, left = Empty, right = Empty }
+        Node { value, left, right } ->
+            if x < value then
+                Node { value = value, left = insert x left, right = right }
+            else
+                Node { value = value, left = left, right = insert x right }
+```
+
+### Modeling expressions
+
+```elara
+type Expr
+    = Literal Int
+    | Add Expr Expr
+    | Multiply Expr Expr
+    | Variable String
+
+def eval : Expr -> Int
+let eval expr =
+    match expr with
+        Literal n -> n
+        Add e1 e2 -> eval e1 + eval e2
+        Multiply e1 e2 -> eval e1 * eval e2
+        Variable _ -> error "Cannot evaluate variable"
+```
+
+## Type safety benefits
+
+ADTs provide compile-time guarantees:
+
+1. **Exhaustiveness checking**: The compiler ensures all cases are handled
+2. **Type safety**: Invalid combinations are caught at compile time
+3. **Refactoring safety**: Adding new constructors reveals all places that need updating
+4. **Self-documenting**: Types clearly express what data is possible
+
+```elara
+-- Compiler ensures all cases handled
+def handle : Option Int -> String
+let handle opt =
+    match opt with
+        Some x -> toString x
+        None -> "nothing"
+        -- Forgetting a case causes a compile error
+```

@@ -1,0 +1,458 @@
+---
+title: 'List Module'
+description: 'Functions for working with immutable linked lists in Elara'
+icon: 'list'
+---
+
+## Overview
+
+The `List` module provides functions for working with immutable linked lists. Lists in Elara are defined as recursive algebraic data types with two constructors: `Nil` (empty list) and `Cons` (element followed by rest of list).
+
+## List Type Definition
+
+```elara
+type List a = Nil | Cons a (List a)
+```
+
+**List Literal Syntax:**
+```elara
+let empty = []                    -- Nil
+let numbers = [1, 2, 3, 4, 5]    -- Cons 1 (Cons 2 (Cons 3 (Cons 4 (Cons 5 Nil))))
+```
+
+## Importing
+
+```elara
+import List
+```
+
+## Functions
+
+### Concatenation
+
+#### append
+
+<ParamField path="append" type="List a -> List a -> List a">
+  Concatenates two lists into a single list.
+</ParamField>
+
+**Signature:**
+```elara
+def append : List a -> List a -> List a
+```
+
+**Description:**
+
+Appends the second list to the end of the first list. This operation is O(n) where n is the length of the first list.
+
+**Example:**
+
+```elara
+import List
+
+let list1 = [1, 2, 3]
+let list2 = [4, 5, 6]
+let combined = append list1 list2  -- [1, 2, 3, 4, 5, 6]
+```
+
+**Implementation:**
+```elara
+let append l1 l2 =
+    match l1 with
+        Nil -> l2
+        Cons x xs -> Cons x (append xs l2)
+```
+
+#### Concatenation operator
+
+<ParamField path="(<>)" type="List a -> List a -> List a">
+  Infix operator alias for `append`. Concatenates two lists.
+</ParamField>
+
+**Signature:**
+```elara
+def (<>) : List a -> List a -> List a
+```
+
+**Example:**
+
+```elara
+import List
+
+let result = [1, 2] <> [3, 4] <> [5, 6]  -- [1, 2, 3, 4, 5, 6]
+```
+
+### Combining Lists
+
+#### zip
+
+<ParamField path="zip" type="List a -> List b -> List (Tuple2 a b)">
+  Combines two lists into a list of pairs. Stops when either list is exhausted.
+</ParamField>
+
+**Signature:**
+```elara
+def zip : List a -> List b -> List (Tuple2 a b)
+```
+
+**Description:**
+
+Takes two lists and returns a list of corresponding pairs. If one list is longer than the other, the extra elements are discarded.
+
+**Example:**
+
+```elara
+import List
+
+let names = ["Alice", "Bob", "Charlie"]
+let ages = [25, 30, 35, 40]
+let paired = zip names ages
+-- [("Alice", 25), ("Bob", 30), ("Charlie", 35)]
+```
+
+**Implementation:**
+```elara
+let zip l1 l2 =
+    match (l1, l2) with
+        (Nil, _) -> Nil
+        (_, Nil) -> Nil
+        (Cons x xs, Cons y ys) -> Cons (x, y) (zip xs ys)
+```
+
+<Accordion title="Pattern Matching on Tuples">
+  The `zip` function uses pattern matching on a tuple `(l1, l2)` to handle multiple cases elegantly. This is a common pattern in functional programming.
+</Accordion>
+
+### List Transformation
+
+#### reverse
+
+<ParamField path="reverse" type="List a -> List a">
+  Reverses the order of elements in a list.
+</ParamField>
+
+**Signature:**
+```elara
+def reverse : List a -> List a
+```
+
+**Description:**
+
+Returns a new list with elements in reverse order. This operation is O(n).
+
+**Example:**
+
+```elara
+import List
+
+let original = [1, 2, 3, 4, 5]
+let reversed = reverse original  -- [5, 4, 3, 2, 1]
+```
+
+**Implementation:**
+```elara
+let reverse l =
+    let reverseGo acc l_ =
+        match l_ with
+            Nil -> acc
+            Cons x xs -> reverseGo (Cons x acc) xs
+    reverseGo Nil l
+```
+
+<Note>
+  The `reverse` function uses a tail-recursive helper function with an accumulator for efficiency.
+</Note>
+
+#### flatten
+
+<ParamField path="flatten" type="List (List a) -> List a">
+  Flattens a list of lists into a single list.
+</ParamField>
+
+**Signature:**
+```elara
+def flatten : List (List a) -> List a
+```
+
+**Description:**
+
+Concatenates all sublists into a single list. Also known as `concat` in some languages.
+
+**Example:**
+
+```elara
+import List
+
+let nested = [[1, 2], [3, 4], [5, 6]]
+let flat = flatten nested  -- [1, 2, 3, 4, 5, 6]
+```
+
+**Implementation:**
+```elara
+let flatten lists =
+    let flattenGo acc lists_ =
+        match lists_ with
+            Nil -> reverse acc
+            Cons x xs -> flattenGo (append x acc) xs
+    flattenGo Nil lists
+```
+
+### Interspersing and Joining
+
+#### intersperse
+
+<ParamField path="intersperse" type="a -> List a -> List a">
+  Inserts a separator between each element of a list.
+</ParamField>
+
+**Signature:**
+```elara
+def intersperse : a -> List a -> List a
+```
+
+**Description:**
+
+Inserts the given separator value between each element of the list.
+
+**Example:**
+
+```elara
+import List
+
+let words = ["hello", "world", "example"]
+let separated = intersperse "," words
+-- ["hello", ",", "world", ",", "example"]
+
+let numbers = [1, 2, 3]
+let withZeros = intersperse 0 numbers  -- [1, 0, 2, 0, 3]
+```
+
+**Implementation:**
+```elara
+let intersperse sep l =
+    let intersperseGo l_ =
+        match l_ with
+            Nil -> Nil
+            Cons x Nil -> Cons x Nil
+            Cons x xs -> Cons x (Cons sep (intersperseGo xs))
+    intersperseGo l
+```
+
+#### intercalate
+
+<ParamField path="intercalate" type="List a -> List (List a) -> List a">
+  Inserts a separator list between each sublist, then flattens the result.
+</ParamField>
+
+**Signature:**
+```elara
+def intercalate : List a -> List (List a) -> List a
+```
+
+**Description:**
+
+Inserts the separator list between each sublist in a list of lists, then concatenates everything into a single list.
+
+**Example:**
+
+```elara
+import List
+
+let words = [["hello"], ["world"], ["example"]]
+let separator = [", "]
+let joined = intercalate separator words
+-- ["hello", ", ", "world", ", ", "example"]
+
+let segments = [[1, 2], [3, 4], [5, 6]]
+let withSep = intercalate [0] segments
+-- [1, 2, 0, 3, 4, 0, 5, 6]
+```
+
+**Implementation:**
+```elara
+let intercalate sep lists =
+    let intercalateGo acc lists_ =
+        match lists_ with
+            Nil -> reverse acc
+            Cons x Nil -> reverse (append x acc)
+            Cons x xs -> intercalateGo (append sep (append x acc)) xs
+    intercalateGo Nil lists
+```
+
+<Tabs>
+  <Tab title="intersperse">
+    Use `intersperse` to insert a separator **between elements** of a single list.
+    
+    ```elara
+    intersperse 0 [1, 2, 3]  -- [1, 0, 2, 0, 3]
+    ```
+  </Tab>
+  
+  <Tab title="intercalate">
+    Use `intercalate` to insert a separator list **between sublists**, then flatten.
+    
+    ```elara
+    intercalate [0] [[1, 2], [3, 4]]  -- [1, 2, 0, 3, 4]
+    ```
+  </Tab>
+</Tabs>
+
+### String Conversion
+
+#### listToString
+
+<ParamField path="listToString" type="List a -> String">
+  Converts a list to its string representation.
+</ParamField>
+
+**Signature:**
+```elara
+def listToString : List a -> String
+```
+
+**Description:**
+
+Converts a list to a string representation in the format `[elem1, elem2, elem3]`. Empty lists are shown as `[]`.
+
+**Example:**
+
+```elara
+import List
+
+let numbers = [1, 2, 3, 4, 5]
+let str = listToString numbers  -- "[1, 2, 3, 4, 5]"
+
+let empty = listToString []  -- "[]"
+```
+
+**Implementation:**
+```elara
+let listToString l =
+    let listToStringGo l_ =
+        match l_ with
+            Nil -> ""
+            Cons x Nil -> toString x
+            Cons x xs -> toString x ++ ", " ++ listToStringGo xs
+    match l with
+            Nil -> "[]"
+            Cons x xs -> "[" ++ listToStringGo (Cons x xs) ++ "]"
+```
+
+## Common Patterns
+
+### Higher-Order Functions with Lists
+
+While not in the List module itself, you can define common higher-order functions:
+
+```elara
+import List
+import Elara.Prim
+
+def map : (a -> b) -> List a -> List b
+let map f list =
+    match list with
+        Nil -> Nil
+        Cons x xs -> Cons (f x) (map f xs)
+
+def filter : (a -> Bool) -> List a -> List a
+let filter p list =
+    match list with
+        Nil -> Nil
+        Cons x xs ->
+            if p x then
+                Cons x (filter p xs)
+            else
+                filter p xs
+```
+
+### Pipeline Processing
+
+<CodeGroup>
+
+```elara Using Pipeline
+import Prelude
+import List
+
+let result = [1, 2, 3, 4, 5]
+    |> map (\x -> x * 2)
+    |> filter (\x -> x > 5)
+    |> reverse
+    |> listToString
+```
+
+```elara Nested Calls
+import List
+
+let result = listToString (
+    reverse (
+        filter (\x -> x > 5) (
+            map (\x -> x * 2) [1, 2, 3, 4, 5]
+        )
+    )
+)
+```
+
+</CodeGroup>
+
+## Complete Example
+
+```elara
+import Prelude
+import List
+import String
+import Elara.Prim
+
+-- Process a list of numbers
+def processNumbers : List Int -> String
+let processNumbers nums =
+    let doubled = map (\x -> x * 2) nums
+    let filtered = filter (\x -> x > 5) doubled
+    let reversed = reverse filtered
+    listToString reversed
+
+-- Combine lists of strings into sentences
+def makeSentences : List (List String) -> String
+let makeSentences wordLists =
+    let sentences = map (\words -> String.join " " words) wordLists
+    String.join ". " sentences
+
+let main =
+    let numbers = [1, 2, 3, 4, 5, 6]
+    println ("Processed: " ++ processNumbers numbers) *>
+    
+    let wordLists = [["Hello", "world"], ["Welcome", "to", "Elara"]]
+    println ("Sentences: " ++ makeSentences wordLists)
+```
+
+## Performance Considerations
+
+<Note>
+  **Time Complexity:**
+  - `append`: O(n) where n is the length of the first list
+  - `reverse`: O(n)
+  - `zip`: O(min(n, m)) where n and m are the list lengths
+  - `flatten`: O(n) where n is the total number of elements
+  - `intersperse`: O(n)
+  - `intercalate`: O(n * m) where n is the number of lists and m is the average list length
+</Note>
+
+<Warning>
+  Lists in Elara are singly-linked lists. Appending to the end of a list requires traversing the entire list. For efficient append operations, consider building lists in reverse and calling `reverse` once at the end.
+</Warning>
+
+## See Also
+
+<CardGroup cols={2}>
+  <Card title="String Module" icon="text" href="/stdlib/string">
+    String manipulation functions
+  </Card>
+  <Card title="Prelude" icon="star" href="/stdlib/prelude">
+    Core operators including pipeline
+  </Card>
+  <Card title="Pattern Matching" icon="code" href="/language/pattern-matching">
+    Learn about pattern matching in Elara
+  </Card>
+  <Card title="Higher-Order Functions" icon="arrow-up" href="/examples/higher-order-functions">
+    See list examples in action
+  </Card>
+</CardGroup>

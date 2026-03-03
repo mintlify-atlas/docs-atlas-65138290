@@ -1,0 +1,302 @@
+---
+title: Hindley-Milner type inference
+description: Understand Elara's powerful type inference system based on Hindley-Milner, including monotypes, polytypes, and unification
+---
+
+Elara's type system is based on the Hindley-Milner type inference algorithm, which provides complete type inference without requiring explicit type annotations in most cases.
+
+## Monotypes and polytypes
+
+Elara distinguishes between two kinds of types:
+
+### Monotypes
+
+Monotypes are simple, non-polymorphic types:
+
+```elara
+-- Concrete types
+def x : Int
+let x = 42
+
+def name : String
+let name = "Alice"
+
+-- Function types
+def add : Int -> Int
+let add x = x + 1
+```
+
+### Polytypes
+
+Polytypes (generic types) contain type variables that can be instantiated:
+
+```elara
+-- Identity function for any type
+def id : a -> a
+let id x = x
+
+-- First element of a tuple
+def fst : (a, b) -> a
+let fst pair = match pair with
+    (x, y) -> x
+```
+
+<Info>
+  Type variables are written with lowercase letters (e.g., `a`, `b`, `c`) and can stand for any type.
+</Info>
+
+## Universal quantification
+
+Polytypes use universal quantification, which can be written explicitly:
+
+```elara
+-- Explicit forall
+def id : forall a. a -> a
+let id x = x
+
+-- Implicit forall (preferred)
+def id : a -> a
+let id x = x
+```
+
+Both forms are equivalent. The `forall a.` can be omitted as all type variables are implicitly universally quantified.
+
+## Type instantiation
+
+Polytypes must be instantiated before use by substituting type variables with concrete types:
+
+```elara
+def id : a -> a
+let id x = x
+
+-- Instantiated to Int -> Int
+def num : Int
+let num = id 1
+
+-- Instantiated to String -> String
+def str : String
+let str = id "hello"
+```
+
+The type checker automatically determines the appropriate instantiation based on context.
+
+## Type unification
+
+Elara uses unification to match types:
+
+```elara
+def map : (a -> b) -> List a -> List b
+let map f list = ...
+
+def id : a -> a
+let id x = x
+
+-- Calling map id unifies (a -> b) with (a -> a)
+-- Therefore b must equal a
+let result : List a -> List a
+let result = map id
+```
+
+<Note>
+  Unification finds the most general type that satisfies all constraints. Here, `b` is unified with `a`.
+</Note>
+
+## Type inference examples
+
+Elara can infer types without annotations:
+
+### Simple expressions
+
+```elara
+-- Inferred as Int
+let x = 42
+
+-- Inferred as List Int
+let numbers = [1, 2, 3]
+
+-- Inferred as String
+let greeting = "hello"
+```
+
+### Functions
+
+```elara
+-- Inferred as Int -> Int
+let double x = x * 2
+
+-- Inferred as (a, b) -> a
+let first pair = match pair with
+    (x, y) -> x
+
+-- Inferred as List a -> Int
+let length list = match list with
+    [] -> 0
+    x :: xs -> 1 + length xs
+```
+
+### Higher-order functions
+
+```elara
+-- Inferred as (a -> b) -> a -> b
+let apply f x = f x
+
+-- Inferred as (b -> c) -> (a -> b) -> (a -> c)
+let compose g f = \x -> g (f x)
+```
+
+## Type constraints
+
+Some expressions constrain type variables:
+
+```elara
+-- 'a' must support addition (numeric)
+let add x y = x + y  -- a -> a -> a where a is numeric
+
+-- 'a' must support equality comparison
+let equals x y = x == y  -- a -> a -> Bool
+```
+
+<Warning>
+  While Elara infers types well, explicit type signatures for top-level functions improve code clarity and provide better error messages.
+</Warning>
+
+## Polymorphic instantiation
+
+Polytypes can be instantiated multiple times with different types:
+
+```elara
+def id : a -> a
+let id x = x
+
+let main =
+    let x = id 1        -- id instantiated as Int -> Int
+    let y = id "hello"  -- id instantiated as String -> String
+    let z = id True     -- id instantiated as Bool -> Bool
+    println (toString x)
+```
+
+## Higher-order polymorphism
+
+Polytypes need not always be instantiated:
+
+```elara
+def map : (a -> b) -> List a -> List b
+let map f list = ...
+
+def id : a -> a
+let id x = x
+
+-- id is NOT instantiated here
+-- Its polytype is unified with (a -> b)
+def mapId : List a -> List a
+let mapId = map id
+```
+
+In this example:
+- `map` expects `(a -> b)`
+- `id` has type `forall a. a -> a`
+- These unify with `b = a`
+- Result: `map id : List a -> List a`
+
+## Type functions
+
+Type constructors are themselves polytypes:
+
+```elara
+-- List is a type function: Type -> Type
+type List a = Nil | Cons a (List a)
+
+-- Option is a type function: Type -> Type
+type Option a = Some a | None
+
+-- (->) is a type function: Type -> Type -> Type
+-- Int -> String is the application of (->) to Int and String
+```
+
+## Let-polymorphism
+
+Elara supports let-polymorphism, allowing bound variables to be polymorphic:
+
+```elara
+let main =
+    let id = \x -> x  -- id is polymorphic here
+    let a = id 1      -- id : Int -> Int
+    let b = id "hi"   -- id : String -> String
+    println (toString a)
+```
+
+This is different from:
+
+```elara
+let main =
+    (\id -> 
+        let a = id 1      -- Error: id is monomorphic
+        let b = id "hi"   -- Cannot use Int -> Int as String -> String
+        println (toString a)
+    ) (\x -> x)
+```
+
+<Info>
+  Variables bound with `let` are generalized to polytypes, while lambda parameters are not.
+</Info>
+
+## Type inference limitations
+
+### Ambiguous types
+
+Some expressions have ambiguous types that require annotation:
+
+```elara
+-- Ambiguous: cannot infer concrete type
+let empty = []  -- Error: ambiguous type
+
+-- Fixed with annotation
+def empty : List Int
+let empty = []
+```
+
+### Recursive functions
+
+Recursive functions may need explicit signatures:
+
+```elara
+-- Type annotation helps inference
+def factorial : Int -> Int
+let factorial n = if n == 0 then 1 else n * factorial (n - 1)
+```
+
+## Principal types
+
+Elara infers the most general (principal) type for every expression:
+
+```elara
+-- Most general type: a -> a
+let id x = x
+
+-- Most general type: (a, b) -> a
+let fst pair = match pair with
+    (x, y) -> x
+
+-- Most general type: (a -> b) -> List a -> List b
+let map f list = match list with
+    [] -> []
+    x :: xs -> f x :: map f xs
+```
+
+The principal type is the least restrictive type that makes the expression well-typed.
+
+## Practical benefits
+
+1. **Type safety without annotations**: Write code without explicit types while maintaining type safety
+2. **Refactoring confidence**: Change implementations without updating type signatures
+3. **Better error messages**: The compiler can pinpoint type mismatches precisely
+4. **Documentation**: Inferred types serve as machine-checked documentation
+
+```elara
+-- No annotations needed, all types inferred
+let example x y =
+    let doubled = x * 2
+    let combined = doubled + y
+    combined
+-- Inferred type: Int -> Int -> Int
+```

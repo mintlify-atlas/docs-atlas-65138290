@@ -1,0 +1,649 @@
+---
+title: 'Result Type'
+description: 'Type-safe error handling in Elara'
+icon: 'check-circle'
+---
+
+## Overview
+
+The `Result` type provides a type-safe way to handle operations that can fail with errors. Unlike exceptions, Result values make error handling explicit in the type system, ensuring that errors cannot be silently ignored.
+
+## Type Definition
+
+```elara
+type Result e a = Ok a | Err e
+```
+
+**Type Parameters:**
+- `e` - The error type
+- `a` - The success value type
+
+**Constructors:**
+- `Ok a` - Represents a successful computation with a result value
+- `Err e` - Represents a failed computation with an error value
+
+## Importing
+
+```elara
+import Result
+```
+
+## Why Result?
+
+<Tabs>
+  <Tab title="Problem">
+    Traditional exception-based error handling has several issues:
+    
+    ```javascript
+    // JavaScript - unchecked exceptions
+    function parseJSON(text) {
+        return JSON.parse(text);  // throws exception on error
+    }
+    
+    let data = parseJSON(input);  // might crash!
+    ```
+  </Tab>
+  
+  <Tab title="Solution">
+    Result makes errors explicit and checked at compile time:
+    
+    ```elara
+    -- Elara - explicit error handling
+    def parseJSON : String -> Result String JsonValue
+    
+    let result = parseJSON input
+    match result with
+        Ok data -> processData data
+        Err msg -> println ("Parse error: " ++ msg)
+    ```
+  </Tab>
+</Tabs>
+
+<Note>
+  Result is similar to `Either` in Haskell, `Result` in Rust, or `Try` in Scala. It's a fundamental pattern for explicit error handling in functional programming.
+</Note>
+
+## Creating Result Values
+
+```elara
+import Result
+import Elara.Prim
+
+-- Explicit construction
+let success : Result String Int = Ok 42
+let failure : Result String Int = Err "Something went wrong"
+
+-- From computation
+def parseInt : String -> Result String Int
+let parseInt str =
+    -- Simplified example (actual parsing would be more complex)
+    if str == "42" then
+        Ok 42
+    else
+        Err ("Cannot parse: " ++ str)
+
+let result1 = parseInt "42"   -- Ok 42
+let result2 = parseInt "abc"  -- Err "Cannot parse: abc"
+```
+
+## Functions
+
+### Status Checks
+
+#### isOk
+
+<ParamField path="isOk" type="Result e a -> Bool">
+  Returns `True` if the result is `Ok`, `False` if it's `Err`.
+</ParamField>
+
+**Signature:**
+```elara
+def isOk : Result e a -> Bool
+```
+
+**Example:**
+
+```elara
+import Result
+
+let success = Ok 42
+let failure = Err "error"
+
+let check1 = isOk success  -- True
+let check2 = isOk failure  -- False
+```
+
+**Implementation:**
+```elara
+let isOk res =
+    match res with
+        Ok _ -> True
+        Err _ -> False
+```
+
+#### isErr
+
+<ParamField path="isErr" type="Result e a -> Bool">
+  Returns `True` if the result is `Err`, `False` if it's `Ok`.
+</ParamField>
+
+**Signature:**
+```elara
+def isErr : Result e a -> Bool
+```
+
+**Example:**
+
+```elara
+import Result
+
+let success = Ok 42
+let failure = Err "error"
+
+let check1 = isErr success  -- False
+let check2 = isErr failure  -- True
+```
+
+**Implementation:**
+```elara
+let isErr res =
+    match res with
+        Ok _ -> False
+        Err _ -> True
+```
+
+### Transformations
+
+#### map
+
+<ParamField path="map" type="(a -> b) -> Result e a -> Result e b">
+  Transforms the success value of a Result, leaving errors unchanged.
+</ParamField>
+
+**Signature:**
+```elara
+def map : (a -> b) -> Result e a -> Result e b
+```
+
+**Description:**
+
+Applies a function to the value inside an `Ok`, transforming it to a new value. If the Result is an `Err`, it's passed through unchanged.
+
+**Example:**
+
+```elara
+import Result
+import Elara.Prim
+
+let result = Ok 5
+let doubled = map (\x -> x * 2) result  -- Ok 10
+
+let error = Err "failed"
+let unchanged = map (\x -> x * 2) error  -- Err "failed"
+```
+
+**Implementation:**
+```elara
+let map f res =
+    match res with
+        Ok a -> Ok (f a)
+        Err e -> Err e
+```
+
+<Accordion title="Why is map useful?">
+  `map` lets you transform successful results without having to manually pattern match every time. It's especially useful when chaining operations:
+  
+  ```elara
+  let result = parseNumber input
+      |> map (\x -> x * 2)
+      |> map (\x -> x + 1)
+      |> map toString
+  ```
+</Accordion>
+
+#### mapErr
+
+<ParamField path="mapErr" type="(e -> f) -> Result e a -> Result f a">
+  Transforms the error value of a Result, leaving success values unchanged.
+</ParamField>
+
+**Signature:**
+```elara
+def mapErr : (e -> f) -> Result e a -> Result f a
+```
+
+**Description:**
+
+Applies a function to the error inside an `Err`, transforming it to a new error type. If the Result is `Ok`, it's passed through unchanged.
+
+**Example:**
+
+```elara
+import Result
+import String
+
+let result = Err 404
+let withMsg = mapErr (\code -> "Error " ++ toString code) result
+-- Err "Error 404"
+
+let success = Ok "data"
+let unchanged = mapErr (\code -> "Error " ++ toString code) success
+-- Ok "data"
+```
+
+**Implementation:**
+```elara
+let mapErr f res =
+    match res with
+        Ok a -> Ok a
+        Err e -> Err (f e)
+```
+
+<CodeGroup>
+
+```elara map (transform success)
+let result = Ok 5
+let doubled = map (\x -> x * 2) result
+-- Ok 10
+```
+
+```elara mapErr (transform error)
+let result = Err 404
+let withMsg = mapErr (\code -> "Error " ++ toString code) result
+-- Err "Error 404"
+```
+
+</CodeGroup>
+
+### Chaining Operations
+
+#### bind
+
+<ParamField path="bind" type="Result e a -> (a -> Result e b) -> Result e b">
+  Chains operations that return Results, also known as flatMap or >>= in other languages.
+</ParamField>
+
+**Signature:**
+```elara
+def bind : Result e a -> (a -> Result e b) -> Result e b
+```
+
+**Description:**
+
+Sequences two operations that can fail. If the first Result is `Ok`, applies the function to its value. If it's `Err`, short-circuits and returns the error.
+
+**Example:**
+
+```elara
+import Result
+import Elara.Prim
+
+def parseInt : String -> Result String Int
+let parseInt str = -- implementation
+
+def safeDiv : Int -> Int -> Result String Int
+let safeDiv x y =
+    if y == 0 then
+        Err "Division by zero"
+    else
+        Ok (x / y)
+
+-- Chain operations
+let compute : String -> String -> Result String Int
+let compute numStr divStr =
+    bind (parseInt numStr) (\num ->
+    bind (parseInt divStr) (\divisor ->
+    safeDiv num divisor))
+
+let result1 = compute "10" "2"  -- Ok 5
+let result2 = compute "10" "0"  -- Err "Division by zero"
+let result3 = compute "abc" "2" -- Err "Parse error: abc"
+```
+
+**Implementation:**
+```elara
+let bind res f =
+    match res with
+        Ok a -> f a
+        Err e -> Err e
+```
+
+<Note>
+  `bind` is crucial for chaining operations that can fail. It automatically propagates errors, so you don't need to check each intermediate result manually.
+</Note>
+
+## Pattern Matching
+
+The most common way to work with Result values is through pattern matching:
+
+### Basic Pattern Matching
+
+```elara
+import Result
+import String
+import Elara.Prim
+
+def processResult : Result String Int -> String
+let processResult res =
+    match res with
+        Ok value -> "Success: " ++ toString value
+        Err msg -> "Error: " ++ msg
+
+let msg1 = processResult (Ok 42)           -- "Success: 42"
+let msg2 = processResult (Err "failed")    -- "Error: failed"
+```
+
+### Nested Results
+
+```elara
+import Result
+
+def parseAndValidate : String -> Result String Int
+let parseAndValidate str =
+    let parsed = parseInt str
+    match parsed with
+        Err e -> Err e
+        Ok num ->
+            if num > 0 then
+                Ok num
+            else
+                Err "Number must be positive"
+```
+
+### Default Values
+
+```elara
+import Result
+
+def getOrDefault : a -> Result e a -> a
+let getOrDefault default res =
+    match res with
+        Ok x -> x
+        Err _ -> default
+
+let value = getOrDefault 0 (Ok 42)    -- 42
+let value2 = getOrDefault 0 (Err "")  -- 0
+```
+
+## Common Patterns
+
+### Safe Division
+
+```elara
+import Result
+import Elara.Prim
+
+def safeDiv : Int -> Int -> Result String Int
+let safeDiv x y =
+    if y == 0 then
+        Err "Division by zero"
+    else
+        Ok (x / y)
+
+-- Usage
+let result = safeDiv 10 2
+match result with
+    Ok quotient -> println ("Result: " ++ toString quotient)
+    Err msg -> println ("Error: " ++ msg)
+```
+
+### File Reading
+
+```elara
+import Result
+import Elara.Prim
+
+def safeReadFile : String -> IO (Result String String)
+let safeReadFile path =
+    -- In practice, you'd wrap the IO operation
+    readFile path >>= \content ->
+    -- Return success (error handling omitted for simplicity)
+    pure (Ok content)
+```
+
+### Validation
+
+```elara
+import Result
+import String
+
+type ValidationError = TooShort | TooLong | InvalidChars
+
+def validateUsername : String -> Result ValidationError String
+let validateUsername name =
+    let len = String.length name
+    if len < 3 then
+        Err TooShort
+    else if len > 20 then
+        Err TooLong
+    else
+        Ok name
+```
+
+## Combining Multiple Results
+
+### Sequential Operations
+
+```elara
+import Result
+
+-- Using bind to chain operations
+def processUser : String -> String -> Result String User
+let processUser nameStr ageStr =
+    bind (parseInt ageStr) (\age ->
+    bind (validateName nameStr) (\name ->
+    Ok (User name age)))
+```
+
+### Collecting Results
+
+```elara
+import Result
+import List
+
+-- Process a list of results
+def sequence : List (Result e a) -> Result e (List a)
+let sequence results =
+    let go acc remaining =
+        match remaining with
+            Nil -> Ok (List.reverse acc)
+            Cons (Ok x) xs -> go (Cons x acc) xs
+            Cons (Err e) _ -> Err e
+    go Nil results
+
+let results = [Ok 1, Ok 2, Ok 3]
+let combined = sequence results  -- Ok [1, 2, 3]
+
+let withError = [Ok 1, Err "fail", Ok 3]
+let failed = sequence withError  -- Err "fail"
+```
+
+## Complete Example
+
+```elara
+import Prelude
+import Result
+import String
+import Elara.Prim
+
+-- Parse and validate integer input
+def parsePositiveInt : String -> Result String Int
+let parsePositiveInt str =
+    let parsed = parseInt str  -- Assume this exists
+    bind parsed (\num ->
+        if num > 0 then
+            Ok num
+        else
+            Err "Number must be positive")
+
+-- Safe division with validation
+def safeDivWithValidation : String -> String -> Result String Int
+let safeDivWithValidation numStr divStr =
+    bind (parsePositiveInt numStr) (\num ->
+    bind (parsePositiveInt divStr) (\div ->
+        if div == 0 then
+            Err "Cannot divide by zero"
+        else
+            Ok (num / div)))
+
+-- Format result for display
+def formatResult : Result String Int -> String
+let formatResult res =
+    match res with
+        Ok value -> "Success: " ++ toString value
+        Err msg -> "Error: " ++ msg
+
+let main =
+    let r1 = safeDivWithValidation "10" "2"
+    let r2 = safeDivWithValidation "10" "0"
+    let r3 = safeDivWithValidation "-5" "2"
+    
+    println (formatResult r1) *>
+    println (formatResult r2) *>
+    println (formatResult r3)
+
+-- Output:
+-- Success: 5
+-- Error: Cannot divide by zero
+-- Error: Number must be positive
+```
+
+## Advanced Patterns
+
+### Result Combinators
+
+```elara
+import Result
+
+-- Apply a function wrapped in a Result to a value wrapped in a Result
+def apply : Result e (a -> b) -> Result e a -> Result e b
+let apply resF resA =
+    match (resF, resA) with
+        (Ok f, Ok a) -> Ok (f a)
+        (Err e, _) -> Err e
+        (_, Err e) -> Err e
+
+-- Combine two Results with a function
+def map2 : (a -> b -> c) -> Result e a -> Result e b -> Result e c
+let map2 f resA resB =
+    bind resA (\a ->
+    bind resB (\b ->
+    Ok (f a b)))
+```
+
+### Converting Between Types
+
+```elara
+import Result
+import Option
+
+-- Convert Option to Result
+def optionToResult : e -> Option a -> Result e a
+let optionToResult err opt =
+    match opt with
+        Some x -> Ok x
+        None -> Err err
+
+-- Convert Result to Option (discarding error)
+def resultToOption : Result e a -> Option a
+let resultToOption res =
+    match res with
+        Ok x -> Some x
+        Err _ -> None
+```
+
+## Best Practices
+
+<Note>
+  **Use Result when:**
+  - Operations can fail and you need to provide error information
+  - You want explicit, compile-time checked error handling
+  - Errors should be handled by the caller
+  - You need to chain multiple fallible operations
+</Note>
+
+<Warning>
+  **Error Types:**
+  - Use descriptive error types (ADTs) instead of just strings when possible
+  - Keep error types simple and actionable
+  - Consider using a custom error type hierarchy for complex applications
+</Warning>
+
+## Comparison with Option
+
+<CodeGroup>
+
+```elara Using Result
+-- Use Result when you need error information
+def parseJSON : String -> Result String JsonValue
+let parseJSON input =
+    -- Returns Err with parse error message
+    Err "Unexpected token at position 42"
+```
+
+```elara Using Option
+-- Use Option when absence is not an error
+def findUser : String -> Option User
+let findUser name =
+    -- Returns None if not found
+    -- No error info needed
+    None
+```
+
+</CodeGroup>
+
+## Error Handling Strategies
+
+<Tabs>
+  <Tab title="Fail Fast">
+    Return errors immediately without recovery:
+    
+    ```elara
+    def process : Input -> Result Error Output
+    let process input =
+        bind (validate input) (\validated ->
+        bind (transform validated) (\transformed ->
+        Ok transformed))
+    ```
+  </Tab>
+  
+  <Tab title="With Defaults">
+    Provide fallback values for errors:
+    
+    ```elara
+    def processWithDefault : Input -> Output
+    let processWithDefault input =
+        match process input with
+            Ok output -> output
+            Err _ -> defaultOutput
+    ```
+  </Tab>
+  
+  <Tab title="Accumulate Errors">
+    Collect multiple errors before failing:
+    
+    ```elara
+    def validateAll : List Input -> Result (List Error) (List Output)
+    let validateAll inputs =
+        -- Collect all validation errors
+        -- Return all errors, not just the first
+    ```
+  </Tab>
+</Tabs>
+
+## See Also
+
+<CardGroup cols={2}>
+  <Card title="Option Type" icon="question" href="/stdlib/option">
+    Optional values without error info
+  </Card>
+  <Card title="Pattern Matching" icon="code" href="/language/pattern-matching">
+    Learn pattern matching syntax
+  </Card>
+  <Card title="IO and Effects" icon="exclamation-triangle" href="/language/io-and-effects">
+    Error handling strategies
+  </Card>
+  <Card title="Examples" icon="book" href="/examples/hello-world">
+    See Result in real examples
+  </Card>
+</CardGroup>

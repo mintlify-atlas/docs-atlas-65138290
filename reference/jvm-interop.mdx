@@ -1,0 +1,441 @@
+---
+title: 'JVM Interoperability'
+description: 'How Elara compiles to JVM bytecode and interoperates with Java'
+---
+
+# JVM Interoperability
+
+Elara is a **purely functional language targeting the JVM**. Every Elara program compiles to JVM bytecode that can run on any standard Java Virtual Machine (Java 8+).
+
+## Compilation Strategy
+
+Elara uses a multi-stage compilation pipeline:
+
+<Steps>
+  <Step title="Core IR Generation">
+    The typed AST is converted to Core, a minimal typed lambda calculus
+  </Step>
+  <Step title="Core Transformations">
+    Optimizations: ANF conversion, closure lifting, dead code elimination
+  </Step>
+  <Step title="JVM IR Lowering">
+    Core expressions are lowered to an intermediate JVM representation
+  </Step>
+  <Step title="Bytecode Emission">
+    The JVM IR is translated to actual JVM bytecode instructions
+  </Step>
+</Steps>
+
+## JVM Intermediate Representation
+
+Before emitting bytecode, Elara uses a high-level IR that abstracts JVM details:
+
+```haskell
+data Module = Module
+  { moduleName :: QualifiedClassName
+  , moduleClasses :: [Class]
+  }
+
+data Class = Class
+  { className :: QualifiedClassName
+  , classSuper :: QualifiedClassName
+  , classFields :: [Field]
+  , classMethods :: [Method]
+  , classConstructors :: [Constructor]
+  }
+```
+
+### IR Instructions
+
+The IR provides structured control flow:
+
+<Accordion title="Assignment">
+```haskell
+Assign (Unique Text) FieldType Expr
+-- r1 : Int = 42;
+```
+</Accordion>
+
+<Accordion title="Conditional Jumps">
+```haskell
+JumpIf Expr Label Label
+-- if (condition) goto trueLabel else goto falseLabel
+```
+</Accordion>
+
+<Accordion title="Method Calls">
+```haskell
+Call (InvokeStatic className methodName descriptor) args
+Call (InvokeVirtual target className methodName descriptor) args
+Call (InvokeInterface target className methodName descriptor) args
+```
+</Accordion>
+
+<Accordion title="Field Access">
+```haskell
+GetField expr className fieldName fieldType
+SetField className fieldName fieldType expr
+```
+</Accordion>
+
+## Translation Rules
+
+### Modules to Classes
+
+Each Elara module becomes a JVM class:
+
+```elara
+module Math
+
+def add : Int -> Int -> Int
+let add x y = x + y
+
+def pi : Float
+let pi = 3.14159
+```
+
+Compiles to:
+
+```java
+public class Math extends java.lang.Object {
+  // Methods for functions
+  public static Func add(Integer x) {
+    return (y) -> x + y;  // Curried!
+  }
+  
+  // Fields for zero-argument bindings
+  public static Float pi = 3.14159;
+}
+```
+
+<Info>
+  **Static by Default**: All top-level Elara definitions become static members since Elara modules are not instantiated.
+</Info>
+
+### Functions and Currying
+
+Elara functions are **automatically curried**. Multi-parameter functions become chains of single-parameter functions:
+
+<Accordion title="Single Parameter">
+```elara
+let identity = \x -> x
+```
+
+```java
+public static Object identity(Object x) {
+  return x;
+}
+```
+</Accordion>
+
+<Accordion title="Multiple Parameters">
+```elara
+let add = \x -> \y -> x + y
+```
+
+```java
+public static Func add(Object x) {
+  return (Object y) -> {
+    // Invoke Elara.Prelude.add(x, y)
+    return Prelude.add(x).run(y);
+  };
+}
+```
+
+Uses Java's functional interfaces (`Func`, `Func2`) for closure representation.
+</Accordion>
+
+<Accordion title="Partial Application">
+```elara
+let add5 = add 5
+```
+
+```java
+public static Func add5 = Math.add(5);
+```
+
+Returns a closure capturing `x = 5`.
+</Accordion>
+
+### Closures and Lambda Lifting
+
+Nested functions that capture variables are compiled using `invokedynamic`:
+
+```elara
+let makeAdder = \x -> \y -> x + y
+```
+
+The closure lifting pass transforms this to:
+
+```java
+public static Func makeAdder(Integer x) {
+  // invokedynamic with captured value x
+  return LambdaMetafactory.metafactory(
+    /* ... */,
+    (Integer x, Integer y) -> Prelude.add(x).run(y),
+    /* ... */
+  ).apply(x);
+}
+```
+
+<Warning>
+  Closures that capture mutable variables require special handling. Elara's purity makes this simpler than in imperative languages.
+</Warning>
+
+### Data Types
+
+Algebraic data types compile to class hierarchies:
+
+<Accordion title="Sum Types">
+```elara
+type Option a = Some a | None
+```
+
+Becomes:
+
+```java
+abstract class Option { }
+
+class Some extends Option {
+  public final Object value;
+  public Some(Object value) { this.value = value; }
+}
+
+class None extends Option {
+  public None() { }
+}
+```
+</Accordion>
+
+<Accordion title="Product Types (Records)">
+```elara
+type Person = { name: String, age: Int }
+```
+
+Becomes:
+
+```java
+class Person {
+  public final String name;
+  public final Integer age;
+  
+  public Person(String name, Integer age) {
+    this.name = name;
+    this.age = age;
+  }
+}
+```
+</Accordion>
+
+### Pattern Matching
+
+Pattern matching compiles to instanceof checks and field access:
+
+```elara
+match opt with
+  Some x -> x
+  None -> defaultValue
+```
+
+Compiles to:
+
+```java
+if (opt instanceof Some) {
+  Object x = ((Some) opt).value;
+  return x;
+} else if (opt instanceof None) {
+  return defaultValue;
+} else {
+  throw new Error("Pattern match failed");
+}
+```
+
+<Note>
+  Exhaustiveness checking happens at compile-time, so the final `else` branch should never execute.
+</Note>
+
+## Primitive Operations
+
+Elara primitive operations map to JVM instructions or standard library calls:
+
+| Elara PrimOp | JVM Implementation |
+|--------------|-------------------|
+| `IntAdd` | `Prelude.add` (handles boxed integers) |
+| `IntSubtract` | `Prelude.minus` |
+| `IntMultiply` | `Prelude.times` |
+| `PrimEquals` | `Objects.equals` + boolean wrapping |
+| `Println` | `IO.println` (wraps `System.out.println`) |
+| `StringCons` | `Elara.String.cons` method |
+| `ToString` | `PrimOps.toString` (dispatches to `.toString()`) |
+
+### Boolean Representation
+
+Elara booleans are **not JVM primitive booleans**:
+
+```elara
+type Bool = True | False
+```
+
+This becomes:
+
+```java
+abstract class Bool { }
+class True extends Bool { }
+class False extends Bool { }
+```
+
+Conversion between primitive and Elara booleans:
+
+```java
+// Primitive to Elara
+boolean primBool = ...;
+Bool elaraBool = primBool ? new True() : new False();
+
+// Elara to Primitive  
+Bool elaraBool = ...;
+boolean primBool = elaraBool instanceof True;
+```
+
+## IO and Side Effects
+
+The `IO` monad is represented as a JVM class:
+
+```java
+public class IO {
+  private final Func0 action;
+  
+  public IO(Func0 action) {
+    this.action = action;
+  }
+  
+  public Object run() {
+    return this.action.run();
+  }
+  
+  public IO bind(Func f) {
+    return new IO(() -> {
+      Object result = this.run();
+      IO next = (IO) f.run(result);
+      return next.run();
+    });
+  }
+}
+```
+
+### Main Method
+
+Elara's `main : IO ()` is wrapped in a standard Java main:
+
+```elara
+module Main
+
+let main = println "Hello, World!"
+```
+
+```java
+public class Main {
+  public static IO main() {
+    return IO.println("Hello, World!");
+  }
+  
+  // Generated JVM entry point
+  public static void main(String[] args) {
+    Main.main().run();
+  }
+}
+```
+
+## JVM Standard Library
+
+Elara includes a small JVM runtime in `jvm-stdlib/`:
+
+- `Elara/Func.java` - Functional interface for 1-argument functions
+- `Elara/Func2.java` - For 2-argument functions
+- `Elara/IO.java` - IO monad implementation
+- `Elara/Prelude.java` - Basic operations (arithmetic, etc.)
+- `Elara/Error.java` - Error handling
+- `Elara/Unit.java` - Unit type singleton
+
+<Warning>
+  The JVM stdlib must be compiled before running Elara programs:
+  ```bash
+  cd jvm-stdlib
+  javac Elara/*.java
+  ```
+</Warning>
+
+## Class File Generation
+
+The bytecode emitter at `src/Elara/JVM/Emit.hs` generates standard Java class files:
+
+<Steps>
+  <Step title="Class Setup">
+    Set class name, superclass (usually `java.lang.Object`), and access flags
+  </Step>
+  <Step title="Emit Fields">
+    Generate public static fields for top-level bindings
+  </Step>
+  <Step title="Emit Methods">
+    Generate public static methods for functions, with proper descriptors
+  </Step>
+  <Step title="Emit Constructors">
+    Generate constructors for data types and closure objects
+  </Step>
+  <Step title="Calculate Stack Maps">
+    Compute stack map frames for bytecode verification (required Java 7+)
+  </Step>
+</Steps>
+
+### Method Descriptors
+
+JVM method descriptors specify argument and return types:
+
+```
+(Ljava/lang/Object;)Ljava/lang/Object;  // Object -> Object
+(II)I                                    // int -> int -> int
+()V                                      // void (for constructors)
+```
+
+Elara uses **type erasure** - all types become `Object` except primitives.
+
+## Performance Considerations
+
+<Accordion title="Boxed Arithmetic">
+Elara integers use `java.lang.Integer`, which has allocation overhead. For performance-critical code, future versions may optimize to primitive `int`.
+</Accordion>
+
+<Accordion title="Closure Allocation">
+Each lambda creates a new closure object. The JVM's escape analysis can sometimes optimize away short-lived closures.
+</Accordion>
+
+<Accordion title="Tail Call Optimization">
+**Not yet implemented**. Elara currently does not optimize tail-recursive functions, which can cause stack overflows on deep recursion.
+</Accordion>
+
+## Debugging
+
+Elara class files can be debugged with standard JVM tools:
+
+```bash
+# Disassemble bytecode
+javap -c -v Main.class
+
+# Run with verbose output
+java -verbose:class Main
+
+# Profile with VisualVM
+java -XX:+UseSerialGC Main
+```
+
+## Future Directions
+
+- **Native Java Interop**: Call Java libraries directly from Elara
+- **Inline Primitives**: Generate specialized bytecode for Int/Float operations
+- **Tail Call Optimization**: Transform tail recursion to loops
+- **Value Types**: Use Project Valhalla's value types for zero-cost abstractions
+
+## Further Reading
+
+- [Compiler Internals](/reference/compiler-internals) - Full compilation pipeline
+- [Type Inference](/reference/type-inference) - How types guide code generation
+- JVM Specification: https://docs.oracle.com/javase/specs/jvms/se8/html/

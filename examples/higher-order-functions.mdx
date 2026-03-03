@@ -1,0 +1,244 @@
+---
+title: 'Higher-Order Functions'
+description: 'Functions that take other functions as arguments or return functions'
+---
+
+Higher-order functions are functions that can accept other functions as parameters or return functions as results. They're a powerful feature of functional programming that enables code reuse and abstraction.
+
+<Steps>
+  <Step title="Map Function">
+    The `map` function applies a transformation to every element in a list:
+
+    ```elara higher_order.elr
+    import Prelude
+    import Elara.Prim
+    import List
+    import String
+
+    -- We can pattern match on recursive data structures like lists
+    def map : (a -> b) -> List a -> List b
+    let map f list =
+        match list with
+            Nil -> Nil
+            Cons x xs -> Cons (f x) (map f xs)
+
+    let main =
+        let numbers = [1, 2, 3, 4, 5]
+        let squared = map (\x -> x * x) numbers
+        
+        println ("Original: " ++ listToString numbers) >>
+        println ("Squared: " ++ listToString squared)
+    ```
+
+    **Expected Output:**
+    ```
+    Original: [1, 2, 3, 4, 5]
+    Squared: [1, 4, 9, 16, 25]
+    ```
+
+    **How it works:**
+    - `map` takes a function `f : (a -> b)` and a list of type `a`
+    - It applies `f` to each element, producing a list of type `b`
+    - `\x -> x * x` is a lambda (anonymous function) that squares its input
+    - The function is polymorphic - works with any types `a` and `b`
+
+    <Note>
+      The `>>` operator sequences IO actions, similar to `;` in imperative languages.
+    </Note>
+  </Step>
+
+  <Step title="Filter Function">
+    The `filter` function keeps only elements that satisfy a predicate:
+
+    ```elara
+    def filter : (a -> Bool) -> List a -> List a
+    let filter p list =
+        match list with
+            Nil -> Nil
+            Cons x xs ->
+                if p x then
+                    Cons x (filter p xs)
+                else
+                    filter p xs
+
+    let main =
+        let numbers = [1, 2, 3, 4, 5]
+        let squared = map (\x -> x * x) numbers
+        let large = filter (\x -> x > 3) squared
+        
+        println ("Original: " ++ listToString numbers) >>
+        println ("Squared: " ++ listToString squared) >>
+        println ("> 3: " ++ listToString large)
+    ```
+
+    **Expected Output:**
+    ```
+    Original: [1, 2, 3, 4, 5]
+    Squared: [1, 4, 9, 16, 25]
+    > 3: [4, 9, 16, 25]
+    ```
+
+    **How it works:**
+    - `filter` takes a predicate `p : (a -> Bool)` and a list
+    - It keeps elements where `p` returns `True`
+    - `\x -> x > 3` is a lambda that checks if a number is greater than 3
+    - Combining `map` and `filter` allows powerful data transformations
+  </Step>
+
+  <Step title="Generic Utility Functions">
+    Higher-order functions can express common patterns:
+
+    ```elara generics.elr
+    import Prelude
+    import Elara.Prim
+    import String
+
+    def identity : a -> a
+    let identity x = x
+
+    def const : a -> b -> a
+    let const x y = x
+
+    def flip : (a -> b -> c) -> b -> a -> c
+    let flip f x y = f y x
+
+    def sub : Int -> Int -> Int
+    let sub x y = x - y
+
+    let main =
+        let idInt = identity 5
+        let idStr = identity "Hello"
+        let alwaysTen = const 10
+        let ten = alwaysTen "ignored"
+        let flippedSub = flip sub
+        let res = flippedSub 10 4
+        println ("Identity Int: " ++ toString idInt) >>
+        println ("Identity Str: " ++ idStr) >>
+        println ("Const: " ++ toString ten) >>
+        println ("Flipped sub (4 - 10): " ++ toString res)
+    ```
+
+    **Expected Output:**
+    ```
+    Identity Int: 5
+    Identity Str: Hello
+    Const: 10
+    Flipped sub (4 - 10): -6
+    ```
+
+    **Function Explanations:**
+    
+    **`identity`**: Returns its argument unchanged
+    - Type: `a -> a` (polymorphic)
+    - Useful for generic programming
+    
+    **`const`**: Returns its first argument, ignoring the second
+    - Type: `a -> b -> a`
+    - `alwaysTen` is a partially applied function that always returns 10
+    
+    **`flip`**: Reverses the order of arguments to a two-argument function
+    - Type: `(a -> b -> c) -> b -> a -> c`
+    - `flip sub` changes `sub x y` (x - y) to subtract in the opposite order
+    - `flippedSub 10 4` computes `4 - 10 = -6`
+
+    <Tip>
+      These utility functions demonstrate how higher-order functions can manipulate the behavior of other functions.
+    </Tip>
+  </Step>
+
+  <Step title="Combining Higher-Order Functions">
+    The real power comes from composing higher-order functions:
+
+    ```elara
+    def main : IO ()
+    let main = print (map (\x -> x * 2) [1, 2, 3])
+    -- Prints [2, 4, 6]
+    ```
+
+    **More Complex Example:**
+    ```elara
+    import Prelude
+    import Elara.Prim
+    import List
+    import String
+
+    let main =
+        let numbers = [1, 2, 3, 4, 5]
+        
+        -- Chain multiple operations
+        let squared = map (\x -> x * x) numbers
+        let large = filter (\x -> x > 3) squared
+        
+        println ("Original: " ++ listToString numbers) >>
+        println ("Squared: " ++ listToString squared) >>
+        println ("> 3: " ++ listToString large)
+    ```
+
+    **Expected Output:**
+    ```
+    Original: [1, 2, 3, 4, 5]
+    Squared: [1, 4, 9, 16, 25]
+    > 3: [4, 9, 16, 25]
+    ```
+
+    **Key Benefits:**
+    - Declarative: express *what* you want, not *how* to compute it
+    - Reusable: `map` and `filter` work with any types and predicates
+    - Composable: combine simple functions to create complex transformations
+  </Step>
+</Steps>
+
+## Common Higher-Order Functions
+
+<CardGroup cols={2}>
+  <Card title="map" icon="function">
+    Transform each element in a collection
+    ```elara
+    map (\x -> x * 2) [1, 2, 3]
+    -- [2, 4, 6]
+    ```
+  </Card>
+  
+  <Card title="filter" icon="filter">
+    Keep only elements that satisfy a condition
+    ```elara
+    filter (\x -> x > 2) [1, 2, 3, 4]
+    -- [3, 4]
+    ```
+  </Card>
+  
+  <Card title="fold" icon="layer-group">
+    Reduce a collection to a single value
+    ```elara
+    fold (+) 0 [1, 2, 3, 4]
+    -- 10
+    ```
+  </Card>
+  
+  <Card title="compose" icon="link">
+    Combine multiple functions into one
+    ```elara
+    (f . g) x
+    -- Same as f (g x)
+    ```
+  </Card>
+</CardGroup>
+
+## Lambda Syntax
+
+Elara uses backslash notation for anonymous functions:
+
+```elara
+\x -> x * 2              -- Single argument
+\x y -> x + y            -- Multiple arguments  
+\x -> \y -> x + y        -- Curried form (equivalent)
+```
+
+<Note>
+  Multi-argument lambdas are automatically converted to nested single-argument lambdas during compilation (currying).
+</Note>
+
+## Next Steps
+
+- [Data Types](/examples/data-types) - Define custom types to use with higher-order functions
+- [Recursion](/examples/recursion) - Many higher-order functions are implemented recursively

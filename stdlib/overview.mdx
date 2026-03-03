@@ -1,0 +1,157 @@
+---
+title: "Standard Library Overview"
+description: "Complete reference for Elara's built-in standard library modules"
+icon: "book"
+---
+
+## Introduction
+
+Elara's standard library provides essential modules and functions for common programming tasks. The standard library is automatically available when you import the `Prelude` module, which re-exports commonly used functionality.
+
+## Core Modules
+
+The standard library is organized into focused modules:
+
+<CardGroup cols={2}>
+  <Card title="Prelude" icon="star" href="/stdlib/prelude">
+    Core utilities and operators imported by default
+  </Card>
+  <Card title="List" icon="list" href="/stdlib/list">
+    Functions for working with linked lists
+  </Card>
+  <Card title="String" icon="text" href="/stdlib/string">
+    String manipulation and concatenation
+  </Card>
+  <Card title="Option" icon="question" href="/stdlib/option">
+    Optional values for safe null handling
+  </Card>
+  <Card title="Result" icon="check-circle" href="/stdlib/result">
+    Error handling with Result types
+  </Card>
+  <Card title="Elara.Prim" icon="cube" href="/stdlib/prelude#primitive-types">
+    Primitive types and operations
+  </Card>
+</CardGroup>
+
+## Importing Modules
+
+To use standard library modules in your code, import them at the top of your file:
+
+```elara
+import Prelude        -- Core utilities (pipe, composition, etc.)
+import List          -- List operations
+import String        -- String functions
+import Option        -- Option type
+import Result        -- Result type
+import Elara.Prim    -- Primitive types and operations
+```
+
+<Note>
+  The `Prelude` module is typically imported in most Elara programs as it provides essential operators and utilities.
+</Note>
+
+## Design Philosophy
+
+### Functional First
+
+Elara's standard library is designed with functional programming principles:
+
+- **Immutability**: All data structures are immutable by default
+- **Pure Functions**: Functions have no side effects (except IO operations)
+- **Type Safety**: Strong static typing catches errors at compile time
+- **Composability**: Functions are designed to work together seamlessly
+
+### Minimal and Focused
+
+Each module provides a focused set of functions:
+
+<Accordion title="List Module">
+  Operations for working with linked lists including `append`, `zip`, `reverse`, `flatten`, and more.
+</Accordion>
+
+<Accordion title="String Module">
+  String concatenation, conversion between strings and character lists, and joining.
+</Accordion>
+
+<Accordion title="Option Module">
+  Safe handling of nullable values with `Some` and `None` constructors.
+</Accordion>
+
+<Accordion title="Result Module">
+  Error handling with `Ok` and `Err` constructors, including map and bind operations.
+</Accordion>
+
+## Common Patterns
+
+### Pipeline Operator
+
+The pipeline operator `|>` from Prelude enables readable data transformations:
+
+```elara
+import Prelude
+import List
+
+let result = [1, 2, 3, 4, 5]
+    |> List.map (\x -> x * 2)
+    |> List.filter (\x -> x > 5)
+    |> List.reverse
+```
+
+### Pattern Matching
+
+All standard library types support pattern matching:
+
+```elara
+import Option
+
+def describe : Option Int -> String
+let describe opt =
+    match opt with
+        Some val -> "Got value: " ++ toString val
+        None -> "Got nothing"
+```
+
+### Function Composition
+
+Compose functions using the `>>` operator:
+
+```elara
+import Prelude
+
+let addOne = (\x -> x + 1)
+let double = (\x -> x * 2)
+let addOneThenDouble = addOne >> double
+
+-- addOneThenDouble 5 == 12
+```
+
+## Primitive Types
+
+Elara provides these primitive types in `Elara.Prim`:
+
+| Type | Description |
+|------|-------------|
+| `Int` | Integer numbers |
+| `Float` | Floating-point numbers |
+| `Char` | Single characters |
+| `String` | Text strings |
+| `Bool` | Boolean values (`True` or `False`) |
+| `Unit` | The unit type `()` |
+| `IO a` | IO operations that produce values of type `a` |
+
+## Next Steps
+
+<CardGroup cols={2}>
+  <Card title="Prelude" icon="arrow-right" href="/stdlib/prelude">
+    Learn about core operators and utilities
+  </Card>
+  <Card title="List Operations" icon="arrow-right" href="/stdlib/list">
+    Master list manipulation functions
+  </Card>
+  <Card title="Error Handling" icon="arrow-right" href="/stdlib/result">
+    Handle errors with Result types
+  </Card>
+  <Card title="Examples" icon="arrow-right" href="/examples/hello-world">
+    See the standard library in action
+  </Card>
+</CardGroup>

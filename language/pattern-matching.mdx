@@ -1,0 +1,314 @@
+---
+title: Pattern matching
+description: Master pattern matching in Elara, including destructuring, guards, and exhaustiveness checking
+---
+
+Pattern matching is a powerful feature that allows you to inspect and destructure values. Elara's pattern matching supports exhaustiveness checking to ensure all cases are covered.
+
+## Basic pattern matching
+
+Use `match ... with` to match values against patterns:
+
+```elara
+def describe : Int -> String
+let describe n =
+    match n with
+        0 -> "zero"
+        1 -> "one"
+        2 -> "two"
+        _ -> "many"
+```
+
+<Note>
+  The underscore `_` is a wildcard pattern that matches any value and discards it.
+</Note>
+
+## Pattern types
+
+### Variable patterns
+
+Bind matched values to names:
+
+```elara
+def identity : a -> a
+let identity x = match x with
+    y -> y  -- y binds to the value of x
+```
+
+### Literal patterns
+
+Match specific literal values:
+
+```elara
+def isZero : Int -> Bool
+let isZero n =
+    match n with
+        0 -> True
+        _ -> False
+```
+
+### Constructor patterns
+
+Match algebraic data type constructors:
+
+```elara
+type Option a = Some a | None
+
+def getOrDefault : Option a -> a -> a
+let getOrDefault opt default =
+    match opt with
+        Some x -> x
+        None -> default
+```
+
+Real-world example:
+
+```elara
+type Shape =
+    Circle Int
+    | Rectangle Int Int
+    | Square Int
+
+def area : Shape -> Int
+let area shape =
+    match shape with
+        Circle r -> 3 * r * r
+        Rectangle w h -> w * h
+        Square s -> s * s
+```
+
+### List patterns
+
+Match list structure:
+
+```elara
+def sum : List Int -> Int
+let sum ls =
+    match ls with
+        [] -> 0
+        x :: xs -> x + sum xs
+
+def first : List a -> Option a
+let first list =
+    match list with
+        [] -> None
+        x :: _ -> Some x
+```
+
+<Info>
+  The `::` operator (cons) matches a non-empty list, binding the head to the left and the tail to the right.
+</Info>
+
+From the standard library:
+
+```elara
+def append : List a -> List a -> List a
+let append l1 l2 =
+    match l1 with
+        Nil -> l2
+        Cons x xs -> Cons x (append xs l2)
+```
+
+### Tuple patterns
+
+Destructure tuples:
+
+```elara
+def swap : (a, b) -> (b, a)
+let swap pair =
+    match pair with
+        (a, b) -> (b, a)
+
+def addPair : (Int, Int) -> Int
+let addPair pair =
+    match pair with
+        (x, y) -> x + y
+```
+
+Real example:
+
+```elara
+def first : (a, b) -> a
+let first p =
+    match p with
+        Tuple2 a b -> a
+
+def zip : List a -> List b -> List (Tuple2 a b)
+let zip l1 l2 =
+    match (l1, l2) with
+        (Nil, _) -> Nil
+        (_, Nil) -> Nil
+        (Cons x xs, Cons y ys) -> Cons (x, y) (zip xs ys)
+```
+
+### Record patterns
+
+Match and destructure record fields:
+
+```elara
+def getName : { name: String, age: Int } -> String
+let getName person =
+    match person with
+        { name: n, age: _ } -> n
+```
+
+### Wildcard patterns
+
+Ignore values you don't need:
+
+```elara
+def isNone : Option a -> Bool
+let isNone opt =
+    match opt with
+        Some _ -> False
+        None -> True
+
+def second : List a -> Option a
+let second list =
+    match list with
+        _ :: x :: _ -> Some x
+        _ -> None
+```
+
+## Nested patterns
+
+Patterns can be nested arbitrarily deep:
+
+```elara
+def describe : Option (List Int) -> String
+let describe opt =
+    match opt with
+        None -> "nothing"
+        Some [] -> "empty list"
+        Some (x :: xs) -> "list starting with " ++ toString x
+```
+
+From the examples:
+
+```elara
+def filter : (a -> Bool) -> List a -> List a
+let filter p list =
+    match list with
+        Nil -> Nil
+        Cons x xs ->
+            if p x then
+                Cons x (filter p xs)
+            else
+                filter p xs
+```
+
+## Pattern guards
+
+Add conditional checks to patterns using `if`:
+
+```elara
+def classify : Int -> String
+let classify n = match n with
+    n if n < 0 -> "negative"
+    n if n == 0 -> "zero"
+    n if n > 0 -> "positive"
+```
+
+<Warning>
+  Guards can break exhaustiveness checking. The compiler may not be able to verify that all cases are covered when using guards.
+</Warning>
+
+## As-patterns
+
+Bind the whole matched value while also destructuring:
+
+```elara
+def example : List Int -> String
+let example list = match list with
+    ([1, _, _] as l) -> "List starting with 1: " ++ toString l
+    _ -> "something else"
+```
+
+## Exhaustiveness checking
+
+Elara ensures all patterns are covered:
+
+```elara
+-- This will compile
+def isSome : Option a -> Bool
+let isSome opt =
+    match opt with
+        Some _ -> True
+        None -> False
+
+-- This will NOT compile (missing None case)
+def unsafeGet : Option a -> a
+let unsafeGet opt =
+    match opt with
+        Some x -> x
+        -- Error: non-exhaustive pattern match!
+```
+
+<Info>
+  The compiler analyzes all pattern matches to ensure you handle every possible case, preventing runtime errors.
+</Info>
+
+## Practical examples
+
+### Option type handling
+
+```elara
+def safeDiv : Int -> Int -> Option Int
+let safeDiv x y =
+    if y == 0 then
+        None
+    else
+        Some (x / y)
+
+def describe : Option Int -> String
+let describe opt =
+    match opt with
+        Some val -> "Got value: " ++ toString val
+        None -> "Got nothing"
+
+let main =
+    let res1 = safeDiv 10 2
+    let res2 = safeDiv 10 0
+    println ("10 / 2: " ++ describe res1) >>
+    println ("10 / 0: " ++ describe res2)
+```
+
+### Recursive list processing
+
+```elara
+def map : (a -> b) -> List a -> List b
+let map f list =
+    match list with
+        Nil -> Nil
+        Cons x xs -> Cons (f x) (map f xs)
+
+def reverse : List a -> List a
+let reverse l =
+    let reverseGo acc l_ =
+        match l_ with
+            Nil -> acc
+            Cons x xs -> reverseGo (Cons x acc) xs
+    reverseGo Nil l
+```
+
+### Complex data structures
+
+```elara
+type JSONElement
+    = JSONString String
+    | JSONNumber Int
+    | JSONNull
+    | JSONArray [JSONElement]
+    | JSONObject [{ key: String, value: JSONElement }]
+
+def jsonToString : JSONElement -> String
+let jsonToString elem = match elem with
+    JSONNull -> "null"
+    JSONString str -> str
+    JSONNumber num -> toString num
+    JSONArray arr -> "[" ++ (String.join ", " (map jsonToString arr)) ++ "]"
+    JSONObject components -> 
+        let componentToString component = match component with
+            { key, value } -> "\"" ++ key ++ "\" : " ++ jsonToString value
+        "{" ++ String.join ", " (map componentToString components) ++ "}"
+```

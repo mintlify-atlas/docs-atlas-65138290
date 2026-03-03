@@ -1,122 +1,98 @@
 {
   "$schema": "https://mintlify.com/docs.json",
-  "theme": "mint",
-  "name": "Mint Starter Kit",
+  "name": "Elara",
+  "theme": "aspen",
   "colors": {
-    "primary": "#16A34A",
-    "light": "#07C983",
-    "dark": "#15803D"
+    "primary": "#7C3AED",
+    "light": "#A78BFA",
+    "dark": "#5B21B6"
   },
-  "favicon": "/favicon.svg",
+  "navbar": {
+    "primary": {
+      "type": "github",
+      "href": "https://github.com/elaralang/elara"
+    }
+  },
+  "footer": {
+    "socials": {
+      "github": "https://github.com/elaralang/elara"
+    }
+  },
   "navigation": {
     "tabs": [
       {
-        "tab": "Guides",
+        "tab": "Documentation",
         "groups": [
           {
-            "group": "Getting started",
+            "group": "Get Started",
             "pages": [
-              "index",
-              "quickstart",
-              "development"
+              "introduction",
+              "installation",
+              "quickstart"
             ]
           },
           {
-            "group": "Customization",
+            "group": "Language Guide",
             "pages": [
-              "essentials/settings",
-              "essentials/navigation"
+              "language/syntax",
+              "language/types",
+              "language/functions",
+              "language/pattern-matching",
+              "language/type-system",
+              "language/algebraic-data-types",
+              "language/io-and-effects"
             ]
           },
           {
-            "group": "Writing content",
+            "group": "Standard Library",
             "pages": [
-              "essentials/markdown",
-              "essentials/code",
-              "essentials/images",
-              "essentials/reusable-snippets"
+              "stdlib/overview",
+              "stdlib/prelude",
+              "stdlib/list",
+              "stdlib/string",
+              "stdlib/option",
+              "stdlib/result"
             ]
           },
           {
-            "group": "AI tools",
+            "group": "Compiler",
             "pages": [
-              "ai-tools/cursor",
-              "ai-tools/claude-code",
-              "ai-tools/windsurf"
+              "compiler/architecture",
+              "compiler/pipeline",
+              "compiler/cli-reference"
+            ]
+          },
+          {
+            "group": "Examples",
+            "pages": [
+              "examples/hello-world",
+              "examples/recursion",
+              "examples/higher-order-functions",
+              "examples/data-types"
             ]
           }
         ]
       },
       {
-        "tab": "API reference",
+        "tab": "Reference",
         "groups": [
           {
-            "group": "API documentation",
+            "group": "Advanced Topics",
             "pages": [
-              "api-reference/introduction"
+              "reference/type-inference",
+              "reference/jvm-interop",
+              "reference/compiler-internals"
             ]
           },
           {
-            "group": "Endpoint examples",
+            "group": "Community",
             "pages": [
-              "api-reference/endpoint/get",
-              "api-reference/endpoint/create",
-              "api-reference/endpoint/delete",
-              "api-reference/endpoint/webhook"
+              "community/contributing",
+              "community/roadmap"
             ]
           }
         ]
       }
-    ],
-    "global": {
-      "anchors": [
-        {
-          "anchor": "Documentation",
-          "href": "https://mintlify.com/docs",
-          "icon": "book-open-cover"
-        },
-        {
-          "anchor": "Blog",
-          "href": "https://mintlify.com/blog",
-          "icon": "newspaper"
-        }
-      ]
-    }
-  },
-  "logo": {
-    "light": "/logo/light.svg",
-    "dark": "/logo/dark.svg"
-  },
-  "navbar": {
-    "links": [
-      {
-        "label": "Support",
-        "href": "mailto:hi@mintlify.com"
-      }
-    ],
-    "primary": {
-      "type": "button",
-      "label": "Dashboard",
-      "href": "https://dashboard.mintlify.com"
-    }
-  },
-  "contextual": {
-    "options": [
-     "copy",
-     "view",
-     "chatgpt",
-     "claude",
-     "perplexity",
-     "mcp",
-     "cursor",
-     "vscode"
-   ]
-  },
-  "footer": {
-    "socials": {
-      "x": "https://x.com/mintlify",
-      "github": "https://github.com/mintlify",
-      "linkedin": "https://linkedin.com/company/mintlify"
-    }
+    ]
   }
 }

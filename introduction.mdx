@@ -1,0 +1,126 @@
+---
+title: Introduction to Elara
+description: A purely functional programming language for the JVM with Haskell-inspired syntax and a complete Hindley-Milner type system
+---
+
+<Note>
+  Elara is currently a work in progress and is not yet ready for production use. Join the [Discord server](https://discord.gg/xu5gSTV) for updates and discussions.
+</Note>
+
+## What is Elara?
+
+Elara is a purely functional programming language that targets the JVM. It combines the elegance of Haskell's syntax with F#-inspired features, bringing powerful functional programming concepts to the Java ecosystem.
+
+### Key features
+
+- **Pure functional programming** - All functions are pure by default, with effects tracked in the type system via an IO monad
+- **Hindley-Milner type system** - Complete type inference means you rarely need to write type annotations
+- **JVM target** - Compiles to Java bytecode for seamless interoperability with the Java ecosystem
+- **Pattern matching** - Powerful pattern matching on algebraic data types
+- **Higher-order functions** - First-class functions with lambda expressions
+- **Algebraic data types** - Define custom types with sum and product types
+
+### Code example
+
+Here's a taste of Elara's syntax:
+
+```elara
+import Prelude
+import Elara.Prim
+import String
+
+type Shape =
+    Circle Int
+    | Rectangle Int Int
+    | Square Int
+
+def area : Shape -> Int
+let area shape =
+    match shape with
+        Circle r -> 3 * r * r
+        Rectangle w h -> w * h
+        Square s -> s * s
+
+let main =
+    let c = Circle 5
+    println ("Area: " ++ toString (area c))
+```
+
+## Get started
+
+<CardGroup cols={2}>
+  <Card
+    title="Installation"
+    icon="download"
+    href="/installation"
+  >
+    Install Elara and set up your development environment
+  </Card>
+  <Card
+    title="Quickstart"
+    icon="rocket"
+    href="/quickstart"
+  >
+    Write and run your first Elara program in minutes
+  </Card>
+  <Card
+    title="Language guide"
+    icon="book"
+    href="/language/syntax"
+  >
+    Learn Elara's syntax, type system, and core concepts
+  </Card>
+  <Card
+    title="Examples"
+    icon="code"
+    href="/examples/hello-world"
+  >
+    Explore real-world code examples and patterns
+  </Card>
+</CardGroup>
+
+## How the compiler works
+
+The Elara compiler transforms your code through multiple passes:
+
+<Steps>
+  <Step title="Lexing">
+    Source code is converted into tokens, with layout rules transformed into braces and semicolons
+  </Step>
+  <Step title="Parsing">
+    Tokens are parsed into a Frontend AST that mirrors the language syntax
+  </Step>
+  <Step title="Desugaring">
+    Syntactic sugar is removed, converting multi-argument lambdas into nested single-argument lambdas
+  </Step>
+  <Step title="Renaming">
+    Names are resolved to fully qualified names and local variables receive unique identifiers
+  </Step>
+  <Step title="Shunting">
+    Operator precedence and associativity are applied
+  </Step>
+  <Step title="Type checking">
+    Types are inferred and checked using the Hindley-Milner algorithm
+  </Step>
+  <Step title="Core transformation">
+    The typed AST is converted to a Core language (similar to GHC's Core)
+  </Step>
+  <Step title="Optimization">
+    Multiple optimization passes are performed on the Core representation
+  </Step>
+  <Step title="JVM emission">
+    The optimized Core is compiled to JVM bytecode and written to class files
+  </Step>
+</Steps>
+
+## Community
+
+Elara is an open-source project under active development. We welcome contributions and feedback!
+
+- Join our [Discord server](https://discord.gg/xu5gSTV) for discussions and support
+- Check out the [GitHub repository](https://github.com/ElaraLang/elara) to contribute
+- Follow development updates and design decisions in the community
+
+## License
+
+Elara is released under the [MIT License](https://github.com/ElaraLang/elara/blob/main/LICENSE).

@@ -1,0 +1,444 @@
+---
+title: 'String Module'
+description: 'String manipulation and conversion functions in Elara'
+icon: 'text'
+---
+
+## Overview
+
+The `String` module provides functions for working with strings, including concatenation, conversion between strings and character lists, and joining operations.
+
+## String Type
+
+Strings in Elara are primitive types defined in `Elara.Prim`:
+
+```elara
+type String = Prim_String
+type Char = Prim_Char
+```
+
+**String Literals:**
+```elara
+let greeting = "Hello, world!"
+let empty = ""
+let multiline = "Line 1\nLine 2"
+```
+
+## Importing
+
+```elara
+import String
+```
+
+## Functions
+
+### Concatenation
+
+#### (++)
+
+<ParamField path="++" type="String -> String -> String">
+  Concatenates two strings into a single string.
+</ParamField>
+
+**Signature:**
+```elara
+def (++) : String -> String -> String
+```
+
+**Description:**
+
+The `++` operator concatenates two strings. It handles empty strings efficiently and recursively builds the result.
+
+**Example:**
+
+```elara
+import String
+import Elara.Prim
+
+let greeting = "Hello, " ++ "world!"  -- "Hello, world!"
+let sentence = "I" ++ " " ++ "love" ++ " " ++ "Elara"  -- "I love Elara"
+```
+
+**Implementation:**
+```elara
+let (++) s1 s2 = 
+    match (s1, s2) with
+        ("", _) -> s2
+        (_, "") -> s1
+        _ -> stringCons (stringHead s1) (stringTail s1 ++ s2)
+```
+
+<Tabs>
+  <Tab title="Basic Usage">
+    ```elara
+    let result = "Hello" ++ " " ++ "World"
+    -- "Hello World"
+    ```
+  </Tab>
+  
+  <Tab title="With Variables">
+    ```elara
+    let name = "Alice"
+    let age = 25
+    let message = "Name: " ++ name ++ ", Age: " ++ toString age
+    -- "Name: Alice, Age: 25"
+    ```
+  </Tab>
+  
+  <Tab title="Empty Strings">
+    ```elara
+    let a = "" ++ "Hello"  -- "Hello"
+    let b = "World" ++ ""  -- "World"
+    let c = "" ++ ""       -- ""
+    ```
+  </Tab>
+</Tabs>
+
+### Conversion Functions
+
+#### stringToList
+
+<ParamField path="stringToList" type="String -> List Char">
+  Converts a string to a list of characters.
+</ParamField>
+
+**Signature:**
+```elara
+def stringToList : String -> List Char
+```
+
+**Description:**
+
+Breaks a string into its constituent characters, returning them as a list. This is useful for character-by-character processing.
+
+**Example:**
+
+```elara
+import String
+import List
+
+let chars = stringToList "Hello"  -- ['H', 'e', 'l', 'l', 'o']
+let empty = stringToList ""        -- []
+```
+
+**Implementation:**
+```elara
+let stringToList s =
+    if stringIsEmpty s then
+        Nil
+    else
+        Cons (stringHead s) (stringToList (stringTail s))
+```
+
+#### stringFromList
+
+<ParamField path="stringFromList" type="List Char -> String">
+  Converts a list of characters to a string.
+</ParamField>
+
+**Signature:**
+```elara
+def stringFromList : List Char -> String
+```
+
+**Description:**
+
+Combines a list of characters into a single string. This is the inverse of `stringToList`.
+
+**Example:**
+
+```elara
+import String
+import List
+
+let str = stringFromList ['H', 'i']  -- "Hi"
+let empty = stringFromList []         -- ""
+```
+
+**Implementation:**
+```elara
+let stringFromList l =
+    match l with
+        Nil -> ""
+        Cons x xs -> stringCons x (stringFromList xs)
+```
+
+<CodeGroup>
+
+```elara String to List
+import String
+
+let chars = stringToList "Hello"
+-- ['H', 'e', 'l', 'l', 'o']
+```
+
+```elara List to String
+import String
+
+let str = stringFromList ['H', 'i']
+-- "Hi"
+```
+
+```elara Round Trip
+import String
+
+let original = "Test"
+let roundTrip = stringFromList (stringToList original)
+-- "Test"
+```
+
+</CodeGroup>
+
+### Joining
+
+#### join
+
+<ParamField path="join" type="String -> List String -> String">
+  Joins a list of strings with a separator.
+</ParamField>
+
+**Signature:**
+```elara
+def join : String -> List String -> String
+```
+
+**Description:**
+
+Concatenates a list of strings, inserting the separator string between each element. This is useful for building comma-separated values, paths, and formatted output.
+
+**Example:**
+
+```elara
+import String
+
+let words = ["Hello", "world", "from", "Elara"]
+let sentence = join " " words  -- "Hello world from Elara"
+
+let csv = join "," ["Alice", "Bob", "Charlie"]  -- "Alice,Bob,Charlie"
+
+let path = join "/" ["home", "user", "documents"]  -- "home/user/documents"
+```
+
+**Implementation:**
+```elara
+let join sep strings =
+    let joinGo acc strings_ =
+        match strings_ with
+            Nil -> acc
+            Cons x Nil -> acc ++ x
+            Cons x xs -> joinGo (acc ++ x ++ sep) xs
+    joinGo "" strings
+```
+
+<Accordion title="How join works">
+  The `join` function uses a tail-recursive helper `joinGo` with an accumulator. It handles three cases:
+  
+  1. **Empty list**: Returns the accumulator
+  2. **Single element**: Appends it without a separator
+  3. **Multiple elements**: Appends the element and separator, then recurses
+  
+  This ensures no trailing separator is added.
+</Accordion>
+
+## Primitive String Operations
+
+These primitive operations from `Elara.Prim` are used internally:
+
+<ParamField path="stringHead" type="String -> Char">
+  Returns the first character of a non-empty string.
+</ParamField>
+
+<ParamField path="stringTail" type="String -> String">
+  Returns the string without its first character.
+</ParamField>
+
+<ParamField path="stringCons" type="Char -> String -> String">
+  Prepends a character to a string.
+</ParamField>
+
+<ParamField path="stringIsEmpty" type="String -> Bool">
+  Checks if a string is empty.
+</ParamField>
+
+<ParamField path="toString" type="a -> String">
+  Converts any value to its string representation.
+</ParamField>
+
+**Example:**
+
+```elara
+import Elara.Prim
+
+let s = "Hello"
+let firstChar = stringHead s    -- 'H'
+let rest = stringTail s         -- "ello"
+let isEmpty = stringIsEmpty "" -- True
+let numStr = toString 42        -- "42"
+```
+
+## Common Patterns
+
+### Building Strings
+
+```elara
+import String
+import Elara.Prim
+
+def formatPerson : String -> Int -> String
+let formatPerson name age =
+    "Name: " ++ name ++ ", Age: " ++ toString age
+
+let person = formatPerson "Alice" 25
+-- "Name: Alice, Age: 25"
+```
+
+### Processing Character Lists
+
+```elara
+import String
+import List
+
+-- Reverse a string by converting to list, reversing, and converting back
+def reverseString : String -> String
+let reverseString s =
+    s |> stringToList
+      |> List.reverse
+      |> stringFromList
+
+let reversed = reverseString "Hello"  -- "olleH"
+```
+
+### CSV and Delimited Data
+
+```elara
+import String
+import List
+
+def makeCSV : List (List String) -> String
+let makeCSV rows =
+    let rowStrings = List.map (join ",") rows
+    join "\n" rowStrings
+
+let data = [
+    ["Name", "Age", "City"],
+    ["Alice", "25", "NYC"],
+    ["Bob", "30", "LA"]
+]
+
+let csv = makeCSV data
+-- "Name,Age,City\nAlice,25,NYC\nBob,30,LA"
+```
+
+## Complete Example
+
+```elara
+import Prelude
+import String
+import List
+import Elara.Prim
+
+-- Format a list of key-value pairs
+def formatKeyValues : List (String, String) -> String
+let formatKeyValues pairs =
+    let formatPair pair =
+        match pair with
+            (key, value) -> key ++ ": " ++ value
+    let formatted = List.map formatPair pairs
+    join "\n" formatted
+
+-- Count characters in a string
+def countChars : String -> Int
+let countChars s =
+    let chars = stringToList s
+    List.length chars  -- Assuming length function exists
+
+-- Truncate a string to a maximum length
+def truncate : Int -> String -> String
+let truncate maxLen s =
+    let chars = stringToList s
+    let truncated = List.take maxLen chars  -- Assuming take exists
+    stringFromList truncated
+
+let main =
+    let info = [
+        ("Name", "Alice"),
+        ("Age", "25"),
+        ("City", "New York")
+    ]
+    println (formatKeyValues info) *>
+    
+    let longText = "This is a very long string"
+    let short = truncate 10 longText
+    println ("Truncated: " ++ short)
+```
+
+## String Building Performance
+
+<Note>
+  **Performance Tip:** String concatenation with `++` is O(n) where n is the length of the first string. When building long strings from many pieces, consider using a list accumulator and joining once at the end:
+  
+  ```elara
+  -- Efficient: Build list, join once
+  let parts = ["part1", "part2", "part3"]
+  let result = join "" parts
+  
+  -- Less efficient: Multiple concatenations
+  let result = "part1" ++ "part2" ++ "part3"
+  ```
+</Note>
+
+## Integration with Other Modules
+
+<Tabs>
+  <Tab title="With List">
+    ```elara
+    import String
+    import List
+    
+    let words = ["Hello", "world"]
+    let sentence = join " " words
+    let chars = stringToList sentence
+    let listStr = listToString chars
+    ```
+  </Tab>
+  
+  <Tab title="With Prelude">
+    ```elara
+    import Prelude
+    import String
+    
+    let result = ["a", "b", "c"]
+        |> join "-"
+        |> (\s -> "Result: " ++ s)
+    ```
+  </Tab>
+  
+  <Tab title="With IO">
+    ```elara
+    import String
+    import Elara.Prim
+    
+    let main =
+        readFile "data.txt" >>= \content ->
+        let lines = stringToList content
+        println ("Length: " ++ toString (List.length lines))
+    ```
+  </Tab>
+</Tabs>
+
+## See Also
+
+<CardGroup cols={2}>
+  <Card title="List Module" icon="list" href="/stdlib/list">
+    List operations for character processing
+  </Card>
+  <Card title="Prelude" icon="star" href="/stdlib/prelude">
+    Primitive string operations
+  </Card>
+  <Card title="Pattern Matching" icon="code" href="/language/pattern-matching">
+    Pattern matching on strings
+  </Card>
+  <Card title="IO Operations" icon="terminal" href="/stdlib/prelude#io-operations">
+    Reading and writing strings
+  </Card>
+</CardGroup>

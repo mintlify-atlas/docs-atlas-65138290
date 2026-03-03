@@ -1,0 +1,245 @@
+---
+title: Compiler Architecture
+description: Overview of the Elara compiler's architecture and design principles
+---
+
+The Elara compiler is built on a query-based architecture with lazy evaluation and memoization, making it efficient and modular.
+
+## Core Design Principles
+
+### Query-Based Architecture
+
+Elara uses a **query-based compilation system** powered by the Rock library. Instead of sequential passes that run eagerly, compilation stages are defined as queries that:
+
+- Are **lazy** - only computed when needed
+- Are **memoized** - results are cached to avoid recomputation
+- Support **cycle detection** - prevents infinite loops in mutual dependencies
+- Enable **incremental compilation** - only recompile what changed
+
+<Note>
+The query system is defined in `src/Elara/Query.hs` and implemented in `src/Elara/Rules.hs`.
+</Note>
+
+### Effect System
+
+The compiler uses the **Effectful** library to manage side effects in a pure, composable way:
+
+```haskell
+type WithRock effects = Rock.Rock Query ': effects
+
+type MinimumQueryEffects =
+  '[ Log (Doc AnsiStyle)
+   , DiagnosticWriter (Doc AnsiStyle)
+   , UniqueGen
+   , StructuredDebug
+   , IOE
+   ]
+```
+
+Each compilation stage declares its required effects, ensuring type-safe error handling and resource management.
+
+## Module Organization
+
+The compiler source code is organized into focused modules:
+
+### Frontend Modules
+
+<AccordionGroup>
+  <Accordion title="Lexer (Elara.Lexer)">
+    Tokenizes source code and handles layout rules:
+    - `Elara.Lexer.Token` - Token definitions
+    - `Elara.Lexer.Reader` - Lexical analysis
+    - `Elara.Lexer.Utils` - Lexer utilities and errors
+  </Accordion>
+
+  <Accordion title="Parser (Elara.Parse)">
+    Builds the Frontend AST from tokens:
+    - `Elara.Parse.Module` - Module structure
+    - `Elara.Parse.Expression` - Expression parsing
+    - `Elara.Parse.Declaration` - Top-level declarations
+    - `Elara.Parse.Type` - Type expressions
+    - `Elara.Parse.Pattern` - Pattern matching
+  </Accordion>
+
+  <Accordion title="Desugarer (Elara.Desugar)">
+    Converts Frontend AST to Desugared AST:
+    - Multi-argument lambdas → nested single-argument lambdas
+    - Let bindings → lambdas
+    - Merges declarations with identical names
+  </Accordion>
+
+  <Accordion title="Renamer (Elara.Rename)">
+    Performs name resolution:
+    - Resolves names to fully qualified names
+    - Generates unique names for local variables
+    - `Elara.Rename.Imports` - Import handling
+    - `Elara.Rename.State` - Renaming state management
+  </Accordion>
+
+  <Accordion title="Shunter (Elara.Shunt)">
+    Applies operator precedence and associativity:
+    - Reassociates binary operators
+    - Converts operators to prefix function calls
+    - `Elara.Shunt.Operator` - Operator table management
+  </Accordion>
+</AccordionGroup>
+
+### Type System Modules
+
+<AccordionGroup>
+  <Accordion title="Type Inference (Elara.TypeInfer)">
+    Hindley-Milner type inference with effects:
+    - `Elara.TypeInfer.ConstraintGeneration` - Generate type constraints
+    - `Elara.TypeInfer.Monad` - Type inference monad
+    - `Elara.TypeInfer.Environment` - Type environment
+    - `Elara.TypeInfer.Generalise` - Type generalization
+    - `Elara.TypeInfer.Context` - Type context management
+  </Accordion>
+
+  <Accordion title="Kind Inference (Elara.Data.Kind)">
+    Infers kinds for user-defined types:
+    - `Elara.Data.Kind.Infer` - Kind inference algorithm
+  </Accordion>
+</AccordionGroup>
+
+### Core Language Modules
+
+<AccordionGroup>
+  <Accordion title="Core IR (Elara.Core)">
+    Simple typed lambda calculus (similar to GHC Core):
+    - `Elara.Core.Module` - Core module representation
+    - `Elara.Core.Pretty` - Pretty printing
+    - `Elara.Core.TypeCheck` - Core type checking
+  </Accordion>
+
+  <Accordion title="ToCore (Elara.ToCore)">
+    Converts Typed AST to Core:
+    - `Elara.ToCore.Match` - Pattern match compilation
+    - Extensive desugaring to 8 core constructors
+  </Accordion>
+
+  <Accordion title="Core Transformations (Elara.CoreToCore)">
+    Optimizes Core IR:
+    - `Elara.Core.ToANF` - A-Normal Form conversion
+    - `Elara.Core.LiftClosures` - Closure lifting
+  </Accordion>
+</AccordionGroup>
+
+### Backend Modules
+
+<AccordionGroup>
+  <Accordion title="JVM Backend (Elara.JVM)">
+    Compiles Core to JVM bytecode:
+    - `Elara.JVM.IR` - JVM intermediate representation
+    - `Elara.JVM.Lower` - Core → JVM IR lowering
+    - `Elara.JVM.Emit` - JVM IR → bytecode emission
+    - `Elara.JVM.Lower.Match` - Pattern match compilation
+    - `Elara.JVM.Lower.Function` - Function compilation
+    - `Elara.JVM.Emit.Lambda` - Lambda lifting
+  </Accordion>
+
+  <Accordion title="Interpreter (Elara.Interpreter)">
+    Direct Core interpreter for rapid development and testing
+  </Accordion>
+</AccordionGroup>
+
+## Key Data Structures
+
+### Abstract Syntax Trees
+
+Elara uses a **tagless final** encoding for ASTs with multiple representations:
+
+```haskell
+data Module ast = Module (ASTLocate ast (Module' ast))
+
+type family ASTLocate (ast :: LocatedAST) a where
+  ASTLocate Frontend a = Located a
+  ASTLocate Desugared a = Located a
+  ASTLocate Renamed a = Located a
+  ASTLocate Shunted a = Located a
+  ASTLocate Typed a = Located a
+```
+
+This allows the same data structure to evolve through compilation stages while maintaining type safety.
+
+### Compiler Settings
+
+<ParamField path="dumpTargets" type="Set DumpTarget">
+  Which compilation stages to dump for debugging
+</ParamField>
+
+<ParamField path="runWith" type="RunWithOption">
+  How to run the compiled program:
+  - `RunWithNone` - Compile only
+  - `RunWithInterpreter` - Run using the Core interpreter
+  - `RunWithJVM` - Run as JVM bytecode
+</ParamField>
+
+<ParamField path="mainFile" type="Maybe FilePath">
+  The main source file to compile
+</ParamField>
+
+<ParamField path="sourceDirs" type="[FilePath]" default="[]">
+  Additional directories to search for source files
+</ParamField>
+
+<ParamField path="programArgs" type="[String]" default="[]">
+  Arguments to pass to the compiled program
+</ParamField>
+
+## Build System Integration
+
+The compiler generates output in the `build/` directory:
+
+```
+build/
+├── Main.class              # Compiled JVM classes
+├── *.parsed.elr            # Intermediate ASTs (if --dump enabled)
+├── *.core.elr
+└── elara.log               # Compilation log
+```
+
+<Warning>
+The `build/` directory is automatically created. Make sure your `.gitignore` includes it.
+</Warning>
+
+## Error Handling
+
+Elara uses a sophisticated error reporting system:
+
+- **Diagnostic Writer** - Collects warnings and errors
+- **ReportableError trait** - All errors implement this for consistent formatting
+- **Source-mapped errors** - Errors include precise source locations
+- **Unicode diagnostics** - Beautiful error messages with colors and arrows
+
+```haskell
+class ReportableError e where
+  report :: e -> Eff '[DiagnosticWriter (Doc AnsiStyle)] ()
+```
+
+## Performance Characteristics
+
+### Compilation Speed
+
+The query-based architecture provides:
+
+- **Incremental compilation** - Only recompile changed modules
+- **Parallel query execution** - Independent queries run concurrently
+- **Memoization** - Expensive computations cached automatically
+
+### Memory Usage
+
+- Queries are garbage collected after use
+- Memoization uses weak references where appropriate
+- Large ASTs are streamed rather than materialized entirely
+
+## Related Pages
+
+<CardGroup cols={2}>
+  <Card title="Compilation Pipeline" icon="arrow-progress" href="/compiler/pipeline">
+    Detailed walkthrough of the 9 compilation passes
+  </Card>
+  <Card title="CLI Reference" icon="terminal" href="/compiler/cli-reference">
+    Complete command-line interface documentation
+  </Card>
+</CardGroup>

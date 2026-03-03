@@ -1,0 +1,216 @@
+---
+title: Basic syntax
+description: Learn the fundamental syntax of Elara, including literals, identifiers, and lightweight syntax rules
+---
+
+Elara features a clean, Haskell-inspired syntax with optional lightweight syntax that makes newlines and indentation significant.
+
+## Hello world
+
+Every Elara program starts with a `main` function of type `IO ()`:
+
+```elara
+def main : IO ()
+let main = println "Hello, World!"
+```
+
+## Identifiers
+
+Elara uses case-sensitive identifiers with specific naming conventions:
+
+- **Variables and functions**: Start with a lowercase letter (e.g., `myFunction`, `x`, `calculate`)
+- **Types and constructors**: Start with an uppercase letter (e.g., `Int`, `String`, `Some`, `None`)
+- **Modules**: Use `UpperCamelCase` separated by dots (e.g., `Main`, `Foo.Bar`)
+
+## Comments
+
+Elara supports single-line comments using `--`:
+
+```elara
+-- This is a comment
+def add : Int -> Int -> Int
+let add x y = x + y  -- Inline comment
+```
+
+## Declarations
+
+Functions are declared with `def` for type signatures and `let` for implementations:
+
+```elara
+def factorial : Int -> Int
+let factorial n = if n == 0 then 1 else n * factorial (n - 1)
+```
+
+<Note>
+  The `def` keyword declares the type signature, while `let` provides the implementation. Both are required for top-level functions.
+</Note>
+
+## Literals
+
+Elara supports several literal types:
+
+### Numbers
+
+```elara
+def x : Int
+let x = 42
+
+def y : Float
+let y = 3.14
+```
+
+### Strings
+
+```elara
+def greeting : String
+let greeting = "Hello, World!"
+```
+
+### Characters
+
+```elara
+def letter : Char
+let letter = 'a'
+```
+
+### Booleans
+
+```elara
+def isTrue : Bool
+let isTrue = True
+
+def isFalse : Bool
+let isFalse = False
+```
+
+### Lists
+
+```elara
+def numbers : List Int
+let numbers = [1, 2, 3, 4, 5]
+
+def emptyList : List String
+let emptyList = []
+```
+
+### Tuples
+
+```elara
+def pair : (Int, String)
+let pair = (42, "answer")
+
+def triple : (Int, Bool, String)
+let triple = (1, True, "test")
+```
+
+## Lightweight syntax
+
+Elara supports lightweight syntax, where semicolons and braces are optional and inferred from indentation.
+
+<Tabs>
+  <Tab title="Lightweight syntax (recommended)">
+    ```elara
+    def factorial : Int -> Int
+    let factorial n =
+        if n == 0 then
+            1
+        else
+            n * factorial (n - 1)
+    
+    let main =
+        let x = 1
+        let y = 2
+        println (x + y)
+    ```
+  </Tab>
+  <Tab title="Normal syntax">
+    ```elara
+    def factorial : Int -> Int
+    let factorial n = {
+        if n == 0 then {
+            1;
+        } else {
+            n * factorial (n - 1);
+        }
+    }
+    
+    let main = {
+        let x = 1;
+        let y = 2;
+        println (x + y);
+    }
+    ```
+  </Tab>
+</Tabs>
+
+## Offside rule
+
+When using lightweight syntax, indentation is significant. Code at the same indentation level is part of the same block:
+
+```elara
+module Main
+let x = 1         -- Correct indentation
+let y = 2         -- Same level as x
+  let z = 3       -- Error: too far indented
+```
+
+<Warning>
+  All declarations at the same level must be indented to the same column. Inconsistent indentation will cause compilation errors.
+</Warning>
+
+## Operators
+
+Elara supports infix operators with customizable precedence:
+
+```elara
+-- Arithmetic
+def result : Int
+let result = 2 + 3 * 4  -- 14
+
+-- Comparison
+def isEqual : Bool
+let isEqual = 5 == 5    -- True
+
+-- List construction
+def list : List Int
+let list = 1 :: [2, 3]  -- [1, 2, 3]
+```
+
+## Function application
+
+Function application uses juxtaposition (no parentheses needed):
+
+```elara
+def add : Int -> Int -> Int
+let add x y = x + y
+
+let main = println (add 2 3)  -- Prints 5
+```
+
+<Info>
+  Parentheses are only needed to group expressions or clarify precedence. `add 2 3` applies `add` to `2` and then to `3`.
+</Info>
+
+## Lambda expressions
+
+Anonymous functions use the `\` (backslash) syntax:
+
+```elara
+def double : Int -> Int
+let double = \x -> x * 2
+
+def multiply : Int -> Int -> Int
+let multiply = \x -> \y -> x * y
+```
+
+## Let bindings
+
+Local variables are declared with `let ... in ...` expressions:
+
+```elara
+def calculate : Int
+let calculate =
+    let x = 5
+    let y = 3
+    x * y + 2  -- 17
+```

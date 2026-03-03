@@ -1,0 +1,162 @@
+---
+title: 'Recursion'
+description: 'Learn how to write recursive functions in Elara'
+---
+
+Recursion is a fundamental technique in functional programming where a function calls itself. Elara supports efficient recursion for elegant solutions to many problems.
+
+<Steps>
+  <Step title="Fibonacci Sequence">
+    A classic example of recursion - calculating Fibonacci numbers:
+
+    ```elara recursion.elr
+    import Prelude
+    import Elara.Prim
+    import String
+
+    def fib : Int -> Int
+    let fib n =
+        if n <= 1 then n
+        else fib (n - 1) + fib (n - 2)
+
+    let main =
+        let n = 10
+        let res = fib n
+        println ("Fibonacci of " ++ toString n ++ " is: " ++ toString res)
+    ```
+
+    **Expected Output:**
+    ```
+    Fibonacci of 10 is: 55
+    ```
+
+    **How it works:**
+    - Base case: `if n <= 1 then n` returns n for 0 or 1
+    - Recursive case: `fib (n - 1) + fib (n - 2)` breaks down the problem
+    - Each recursive call works on a smaller input until reaching the base case
+
+    <Note>
+      This naive Fibonacci implementation has exponential time complexity O(2^n). For production code, consider using memoization or iteration.
+    </Note>
+  </Step>
+
+  <Step title="Factorial Function">
+    Computing factorial using recursion:
+
+    ```elara
+    def factorial : Int -> Int
+    let factorial n = if n == 0 then 1 else n * factorial (n - 1)
+    ```
+
+    **Usage Example:**
+    ```elara
+    let main =
+        let result = factorial 5
+        println ("5! = " ++ toString result)
+    ```
+
+    **Expected Output:**
+    ```
+    5! = 120
+    ```
+
+    **How it works:**
+    - Base case: `if n == 0 then 1` - factorial of 0 is 1
+    - Recursive case: `n * factorial (n - 1)` - multiply n by factorial of (n-1)
+    - The computation: 5 * 4 * 3 * 2 * 1 = 120
+  </Step>
+
+  <Step title="List Sum with Pattern Matching">
+    Recursively sum a list using pattern matching:
+
+    ```elara
+    def sum : [Int] -> Int
+    let sum ls =
+        match ls with
+            [] -> 0
+            x::xs -> x + sum xs
+
+    def main : IO ()
+    let main = print (sum [1, 2, 3])
+    -- Prints 6
+    ```
+
+    **Expected Output:**
+    ```
+    6
+    ```
+
+    **How it works:**
+    - Base case: `[] -> 0` - empty list sums to 0
+    - Recursive case: `x::xs -> x + sum xs` - add head to sum of tail
+    - Pattern matching destructures the list into head (`x`) and tail (`xs`)
+    - Process: 1 + (2 + (3 + 0)) = 6
+
+    <Tip>
+      Pattern matching with `::` (cons) is the idiomatic way to process lists recursively in Elara.
+    </Tip>
+  </Step>
+
+  <Step title="Recursive List Processing">
+    Many list operations are naturally recursive. Here's a complete example:
+
+    ```elara
+    import Prelude
+    import Elara.Prim
+    import List
+    import String
+
+    def length : [a] -> Int
+    let length ls =
+        match ls with
+            [] -> 0
+            x::xs -> 1 + length xs
+
+    def reverse : [a] -> [a]
+    let reverse ls =
+        match ls with
+            [] -> []
+            x::xs -> reverse xs ++ [x]
+
+    let main =
+        let numbers = [1, 2, 3, 4, 5]
+        let len = length numbers
+        println ("Length: " ++ toString len)
+    ```
+
+    **Expected Output:**
+    ```
+    Length: 5
+    ```
+
+    **Key Concepts:**
+    - Both functions use the same recursive pattern: base case for `[]`, recursive case for `x::xs`
+    - `length` counts elements by adding 1 for each element
+    - `reverse` builds a new list with elements in reverse order
+  </Step>
+</Steps>
+
+## Recursion Best Practices
+
+<CardGroup cols={2}>
+  <Card title="Always Define Base Cases" icon="stop">
+    Every recursive function must have at least one base case that doesn't recurse, or it will run forever.
+  </Card>
+  
+  <Card title="Make Progress Toward Base Case" icon="arrow-trend-down">
+    Each recursive call should work with a "smaller" input, getting closer to the base case.
+  </Card>
+  
+  <Card title="Use Pattern Matching" icon="diagram-split-tree">
+    Pattern matching makes recursive functions on algebraic data types elegant and safe.
+  </Card>
+  
+  <Card title="Consider Tail Recursion" icon="rotate">
+    Tail-recursive functions (where the recursive call is the last operation) can be optimized by the compiler.
+  </Card>
+</CardGroup>
+
+## Next Steps
+
+- [Higher-Order Functions](/examples/higher-order-functions) - Combine recursion with functions as values
+- [Data Types](/examples/data-types) - Use recursion with custom data types

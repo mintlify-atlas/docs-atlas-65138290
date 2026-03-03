@@ -1,0 +1,617 @@
+---
+title: CLI Reference
+description: Complete command-line interface reference for the Elara compiler
+---
+
+The Elara compiler provides a command-line interface for building and running Elara programs.
+
+## Installation
+
+Build the compiler from source:
+
+```bash
+cd elara
+cabal build
+cabal install
+```
+
+Verify installation:
+
+```bash
+elara --version
+```
+
+## Commands
+
+### `elara build`
+
+Compile an Elara program to JVM bytecode without running it.
+
+```bash
+elara build <MAIN_FILE> [OPTIONS]
+```
+
+<ParamField path="MAIN_FILE" type="string" required>
+  Path to the main Elara source file to compile. Must contain a `Main` module with a `main : IO ()` function.
+</ParamField>
+
+#### Options
+
+<ParamField path="--dump" type="string" default="">
+  Comma-separated list of intermediate compilation stages to dump to files.
+  
+  Valid values:
+  - `lexed` - Lexer output (tokens)
+  - `parsed` - Frontend AST
+  - `desugared` - Desugared AST
+  - `renamed` - Renamed AST
+  - `shunted` - Shunted AST (after operator precedence)
+  - `typed` - Typed AST
+  - `core` - Core IR (and ANF, closure-lifted variants)
+  - `ir` - JVM IR
+  - `jvm` - JVM bytecode disassembly
+  
+  **Example**: `--dump=core,jvm`
+  
+  **Environment variable**: `ELARA_DUMP`
+</ParamField>
+
+<ParamField path="--source-dirs" type="string" default="[]">
+  Comma-separated list of directories to search for source files.
+  
+  **Example**: `--source-dirs=lib,src`
+  
+  **Environment variable**: `ELARA_SOURCE_DIRS`
+</ParamField>
+
+#### Examples
+
+<CodeGroup>
+```bash Basic Build
+elara build Main.elara
+```
+
+```bash With Dumps
+elara build Main.elara --dump=typed,core
+```
+
+```bash Multiple Source Directories
+elara build Main.elara --source-dirs=lib,stdlib,src
+```
+
+```bash Full Example
+elara build examples/Factorial.elara --dump=core,jvm --source-dirs=stdlib
+```
+</CodeGroup>
+
+#### Output
+
+Compiled class files are written to the `build/` directory:
+
+```bash
+$ elara build Main.elara
+[INFO] Compiled Main to ["build/Main.class"]!
+[INFO] Successfully compiled 1 source files in 45.23ms!
+```
+
+```
+build/
+└── Main.class
+```
+
+---
+
+### `elara run`
+
+Compile and execute an Elara program.
+
+```bash
+elara run <MAIN_FILE> [OPTIONS] [-- PROGRAM_ARGS...]
+```
+
+<ParamField path="MAIN_FILE" type="string" required>
+  Path to the main Elara source file to run.
+</ParamField>
+
+<ParamField path="PROGRAM_ARGS" type="string[]">
+  Arguments to pass to the program being run (after `--`).
+</ParamField>
+
+#### Options
+
+<ParamField path="--target" type="string" default="interp">
+  Execution target. Determines how the program runs.
+  
+  Valid values:
+  - `interp` - Run using the Core interpreter (fast compilation, slower execution)
+  - `jvm` - Compile to JVM bytecode and run (slower compilation, faster execution)
+  
+  **Example**: `--target=jvm`
+</ParamField>
+
+<ParamField path="--dump" type="string" default="">
+  Same as `elara build --dump`.
+</ParamField>
+
+<ParamField path="--source-dirs" type="string" default="[]">
+  Same as `elara build --source-dirs`.
+</ParamField>
+
+#### Examples
+
+<CodeGroup>
+```bash Run with Interpreter
+elara run Main.elara
+```
+
+```bash Run with JVM
+elara run Main.elara --target=jvm
+```
+
+```bash Pass Arguments
+elara run Main.elara -- arg1 arg2 arg3
+```
+
+```bash Debug with Dumps
+elara run Main.elara --target=interp --dump=typed,core
+```
+</CodeGroup>
+
+#### Output
+
+<Tabs>
+  <Tab title="Interpreter">
+    ```bash
+    $ elara run examples/Hello.elara
+    [INFO] Successfully ran 1 source files in 32.15ms!
+    Hello, World!
+    ```
+    
+    The interpreter executes Core IR directly without generating JVM bytecode.
+  </Tab>
+  
+  <Tab title="JVM">
+    ```bash
+    $ elara run examples/Hello.elara --target=jvm
+    [INFO] Compiled Main to ["build/Main.class"]!
+    [INFO] Successfully ran 1 source files in 78.42ms!
+    Hello, World!
+    ```
+    
+    JVM target compiles to bytecode first, then executes via `java`.
+  </Tab>
+</Tabs>
+
+---
+
+## Global Options
+
+These options work with all commands:
+
+<ParamField path="--help" type="flag">
+  Display help information and exit.
+  
+  ```bash
+  elara --help
+  elara build --help
+  elara run --help
+  ```
+</ParamField>
+
+<ParamField path="--version" type="flag">
+  Display compiler version and exit.
+  
+  ```bash
+  elara --version
+  ```
+</ParamField>
+
+---
+
+## Environment Variables
+
+<ParamField path="ELARA_DUMP" type="string" default="">
+  Same as `--dump` flag. Command-line flags override environment variables.
+  
+  ```bash
+  export ELARA_DUMP=core,jvm
+  elara build Main.elara
+  ```
+</ParamField>
+
+<ParamField path="ELARA_SOURCE_DIRS" type="string" default="">
+  Same as `--source-dirs` flag. Command-line flags override environment variables.
+  
+  ```bash
+  export ELARA_SOURCE_DIRS=lib,stdlib
+  elara build Main.elara
+  ```
+</ParamField>
+
+<ParamField path="ELARA_DEBUG" type="boolean" default="false">
+  Enable debug logging. Set to `1` or `true` to enable.
+  
+  ```bash
+  export ELARA_DEBUG=1
+  elara build Main.elara
+  ```
+</ParamField>
+
+<ParamField path="ELARA_LOG_LEVEL" type="string" default="info">
+  Set minimum log level.
+  
+  Valid values: `debug`, `info`, `warning`, `error`
+  
+  ```bash
+  export ELARA_LOG_LEVEL=debug
+  elara build Main.elara
+  ```
+</ParamField>
+
+---
+
+## Configuration Files
+
+Elara supports YAML configuration files for project settings.
+
+### Location
+
+The compiler searches for configuration in this order:
+
+1. `./elara.yaml` (current directory)
+2. `./elara.yml`
+3. `~/.config/elara/config.yaml`
+
+### Format
+
+```yaml elara.yaml
+# Compilation options
+dump:
+  - core
+  - jvm
+
+sourceDirs:
+  - lib
+  - stdlib
+  - src
+
+# Runtime options
+target: jvm
+```
+
+<Note>
+Command-line flags override configuration file settings, which override environment variables.
+</Note>
+
+---
+
+## Dump Targets Reference
+
+Each dump target writes intermediate compilation artifacts to the `build/` directory.
+
+<AccordionGroup>
+  <Accordion title="lexed">
+    **File**: `build/<module>.lexed.elr`
+    
+    **Content**: Token stream with layout rules applied
+    
+    ```
+    DEF IDENTIFIER("main") COLON IDENTIFIER("IO") ...
+    ```
+  </Accordion>
+  
+  <Accordion title="parsed">
+    **File**: `build/<module>.parsed.elr`
+    
+    **Content**: Frontend AST (directly mirrors source syntax)
+    
+    ```haskell
+    Module
+      { name = Main
+      , declarations =
+          [ ValueDeclaration { name = "main", ... }
+          ]
+      }
+    ```
+  </Accordion>
+  
+  <Accordion title="desugared">
+    **File**: `build/<module>.desugared.elr`
+    
+    **Content**: Desugared AST (multi-arg lambdas curried, let params removed)
+    
+    ```haskell
+    ValueDeclaration
+      { name = "main"
+      , value = Lambda "x" (Lambda "y" ...)
+      }
+    ```
+  </Accordion>
+  
+  <Accordion title="renamed">
+    **File**: `build/<module>.renamed.elr`
+    
+    **Content**: Renamed AST (all names fully qualified and unique)
+    
+    ```haskell
+    ValueDeclaration
+      { name = Main.main
+      , value = App (Elara.Prelude.print) ...
+      }
+    ```
+  </Accordion>
+  
+  <Accordion title="shunted">
+    **File**: `build/<module>.shunted.elr`
+    
+    **Content**: Shunted AST (operators in prefix form, precedence applied)
+    
+    ```haskell
+    App (App (Var "+") (Var "x")) (Var "y")
+    ```
+  </Accordion>
+  
+  <Accordion title="typed">
+    **File**: `build/<module>.typed.elr`
+    
+    **Content**: Typed AST (every expression annotated with its type)
+    
+    ```haskell
+    ValueDeclaration
+      { name = Main.main
+      , type' = IO ()
+      , value = App @(String -> IO ()) @String ...
+      }
+    ```
+  </Accordion>
+  
+  <Accordion title="core">
+    **Files**:
+    - `build/<module>.core.elr` - Initial Core IR
+    - `build/<module>.core.anf.elr` - A-Normal Form
+    - `build/<module>.core.closure_lifted.elr` - After closure lifting
+    - `build/<module>.core.final.elr` - Final optimized Core
+    
+    **Content**: Simplified lambda calculus with 8 constructors
+    
+    ```haskell
+    Let main (Lam () (App (Var print) (Lit "Hello")))
+    ```
+  </Accordion>
+  
+  <Accordion title="ir">
+    **File**: `build/<module>.jvm.ir.elr`
+    
+    **Content**: JVM intermediate representation (before bytecode)
+    
+    ```java
+    public class Main {
+      public static Object main() {
+        return Prelude.print("Hello");
+      }
+    }
+    ```
+  </Accordion>
+  
+  <Accordion title="jvm">
+    **File**: `build/<module>.classfile.txt`
+    
+    **Content**: JVM bytecode disassembly
+    
+    ```
+    public class Main {
+      public static java.lang.Object main();
+        Code:
+           0: ldc           #2
+           2: invokestatic  #3
+           5: areturn
+    }
+    ```
+  </Accordion>
+</AccordionGroup>
+
+---
+
+## Exit Codes
+
+<ResponseField name="0" type="success">
+  Compilation/execution succeeded
+</ResponseField>
+
+<ResponseField name="1" type="error">
+  Compilation or runtime error occurred
+</ResponseField>
+
+<ResponseField name="2" type="error">
+  Invalid command-line arguments
+</ResponseField>
+
+---
+
+## Logging
+
+The compiler writes logs to:
+
+1. **Standard output** - Colored, formatted output
+2. **`elara.log`** - Plain text log file in current directory
+
+### Log Format
+
+```
+[INFO] Successfully compiled 3 source files in 125.45ms!
+[WARNING] Unused variable 'x' at Main.elara:15:9
+[ERROR] Type mismatch at Main.elara:20:5
+```
+
+### Controlling Log Output
+
+<Steps>
+  <Step title="Set Log Level">
+    ```bash
+    export ELARA_LOG_LEVEL=debug
+    elara build Main.elara
+    ```
+  </Step>
+  
+  <Step title="Disable Colors">
+    ```bash
+    NO_COLOR=1 elara build Main.elara
+    ```
+  </Step>
+  
+  <Step title="Redirect to File">
+    ```bash
+    elara build Main.elara 2>&1 | tee output.log
+    ```
+  </Step>
+</Steps>
+
+---
+
+## Examples
+
+### Basic Workflow
+
+<Steps>
+  <Step title="Create a Program">
+    ```elara Main.elara
+    def main : IO ()
+    let main = print "Hello, Elara!"
+    ```
+  </Step>
+  
+  <Step title="Build It">
+    ```bash
+    elara build Main.elara
+    ```
+  </Step>
+  
+  <Step title="Run It">
+    ```bash
+    java -cp build:jvm-stdlib Main
+    ```
+    
+    Or use `elara run`:
+    ```bash
+    elara run Main.elara --target=jvm
+    ```
+  </Step>
+</Steps>
+
+### Debug Compilation Issues
+
+<Steps>
+  <Step title="Enable Debug Logging">
+    ```bash
+    export ELARA_DEBUG=1
+    ```
+  </Step>
+  
+  <Step title="Dump Intermediate Stages">
+    ```bash
+    elara build Main.elara --dump=parsed,renamed,typed,core
+    ```
+  </Step>
+  
+  <Step title="Inspect Output">
+    ```bash
+    ls build/
+    # Main.parsed.elr  Main.renamed.elr  Main.typed.elr  Main.core.elr
+    
+    cat build/Main.typed.elr
+    ```
+  </Step>
+</Steps>
+
+### Multi-Module Project
+
+```bash
+project/
+├── Main.elara
+├── lib/
+│   ├── Utils.elara
+│   └── Types.elara
+└── elara.yaml
+```
+
+```yaml elara.yaml
+sourceDirs:
+  - lib
+```
+
+```bash
+elara build Main.elara
+# Automatically finds modules in lib/
+```
+
+---
+
+## Troubleshooting
+
+<AccordionGroup>
+  <Accordion title="Module not found">
+    **Error**:
+    ```
+    [ERROR] Module 'Foo' not found
+    ```
+    
+    **Solution**:
+    1. Check that the module file exists
+    2. Add the directory to `--source-dirs`:
+       ```bash
+       elara build Main.elara --source-dirs=lib
+       ```
+    3. Verify the module name matches the file name
+  </Accordion>
+  
+  <Accordion title="Java heap space error">
+    **Error**:
+    ```
+    Exception in thread "main" java.lang.OutOfMemoryError: Java heap space
+    ```
+    
+    **Solution**: Increase JVM heap size:
+    ```bash
+    export JAVA_OPTS="-Xmx2G"
+    java -cp build:jvm-stdlib Main
+    ```
+  </Accordion>
+  
+  <Accordion title="Class not found at runtime">
+    **Error**:
+    ```
+    Error: Could not find or load main class Main
+    ```
+    
+    **Solution**: Ensure both `build/` and `jvm-stdlib/` are in classpath:
+    ```bash
+    java -cp build:jvm-stdlib Main
+    ```
+  </Accordion>
+  
+  <Accordion title="Permission denied">
+    **Error**:
+    ```
+    elara: build/Main.class: permission denied
+    ```
+    
+    **Solution**:
+    ```bash
+    chmod +w build/
+    elara build Main.elara
+    ```
+  </Accordion>
+</AccordionGroup>
+
+---
+
+## Related Pages
+
+<CardGroup cols={2}>
+  <Card title="Compiler Architecture" icon="diagram-project" href="/compiler/architecture">
+    Learn about the compiler's internal design
+  </Card>
+  <Card title="Compilation Pipeline" icon="arrow-progress" href="/compiler/pipeline">
+    Understand the 9 compilation stages
+  </Card>
+</CardGroup>

@@ -1,0 +1,343 @@
+---
+title: IO and side effects
+description: Understand how Elara handles side effects through the IO monad, ensuring pure functional programming
+---
+
+Elara is a purely functional language, meaning functions have no side effects by default. All side effects are explicitly tracked in the type system using the `IO` type.
+
+## The IO type
+
+Values of type `IO a` represent computations that:
+- May perform I/O operations (reading files, printing, network requests)
+- Will produce a value of type `a` when executed
+- Are not executed until the runtime runs them
+
+```elara
+def main : IO ()
+let main = println "Hello, World!"
+
+def readInput : IO String
+let readInput = readFile "input.txt"
+```
+
+<Info>
+  `IO ()` represents an I/O action that produces no meaningful value (the unit type `()`).
+</Info>
+
+## Pure vs impure functions
+
+### Pure functions
+
+Pure functions have no side effects:
+
+```elara
+def add : Int -> Int -> Int
+let add x y = x + y
+
+def factorial : Int -> Int
+let factorial n = if n == 0 then 1 else n * factorial (n - 1)
+
+def map : (a -> b) -> List a -> List b
+let map f list =
+    match list with
+        [] -> []
+        x :: xs -> f x :: map f xs
+```
+
+### Impure functions (IO actions)
+
+Functions that perform I/O have `IO` in their return type:
+
+```elara
+def println : a -> IO ()
+let println = elaraPrimitive "println"
+
+def readFile : String -> IO String
+let readFile = elaraPrimitive "readFile"
+
+def getArgs : IO (List String)
+let getArgs = elaraPrimitive "getArgs"
+```
+
+<Note>
+  You cannot call an `IO` function from a pure function. The type system enforces this separation.
+</Note>
+
+## Sequencing IO actions
+
+Use the bind operator `>>=` to sequence IO actions:
+
+```elara
+def (>>=) : IO a -> (a -> IO b) -> IO b
+let (>>=) = elaraPrimitive ">>="
+
+-- Read arguments and print them
+let main : IO ()
+let main = 
+    getArgs >>= (\args -> println (toString args))
+```
+
+### Chaining multiple actions
+
+```elara
+let main =
+    readFile "input.txt" >>= (\content ->
+    println content >>= (\_ ->
+    println "Done!"))
+```
+
+## The monadic bind (>>=)
+
+The bind operator `>>=` allows you to:
+1. Execute an IO action
+2. Extract its result
+3. Use that result to determine the next action
+
+```elara
+def echo : IO ()
+let echo =
+    getArgs >>= (\args ->
+    println ("You said: " ++ toString args))
+```
+
+<Info>
+  `>>=` is pronounced "bind". The left side is an `IO a`, and the right side is a function `a -> IO b`.
+</Info>
+
+## Sequencing operator (>>)
+
+Use `*>` when you don't need the result of the first action:
+
+```elara
+def (*>) : IO a -> IO b -> IO b
+let (*>) m1 m2 = m1 >>= (\_ -> m2)
+
+let main =
+    println "First" *>
+    println "Second" *>
+    println "Third"
+```
+
+From the examples:
+
+```elara
+let main =
+    println ("10 / 2: " ++ describe res1) >>
+    println ("10 / 0: " ++ describe res2)
+```
+
+<Note>
+  The `>>` operator in the Prelude is actually function composition. For sequencing IO, use `*>` or `>>=`.
+</Note>
+
+## Common IO primitives
+
+Elara provides several primitive IO operations:
+
+### Printing
+
+```elara
+def println : a -> IO ()
+let println = elaraPrimitive "println"
+
+let main =
+    println "Hello" *>
+    println 42 *>
+    println [1, 2, 3]
+```
+
+### Reading files
+
+```elara
+def readFile : String -> IO String
+let readFile = elaraPrimitive "readFile"
+
+let main =
+    readFile "data.txt" >>= (\content ->
+    println content)
+```
+
+### Command-line arguments
+
+```elara
+def getArgs : IO (List String)
+let getArgs = elaraPrimitive "getArgs"
+
+let main =
+    getArgs >>= (String.join ", " >> println)
+```
+
+## Combining pure and impure code
+
+Pure functions can be used within IO actions:
+
+```elara
+def processData : String -> String
+let processData s = s ++ "!"
+
+let main : IO ()
+let main =
+    readFile "input.txt" >>= (\content ->
+    let processed = processData content  -- Pure function
+    println processed)
+```
+
+Real example:
+
+```elara
+def safeDiv : Int -> Int -> Option Int  -- Pure
+let safeDiv x y =
+    if y == 0 then None else Some (x / y)
+
+def describe : Option Int -> String  -- Pure
+let describe opt =
+    match opt with
+        Some val -> "Got value: " ++ toString val
+        None -> "Got nothing"
+
+let main =  -- Impure
+    let res1 = safeDiv 10 2
+    let res2 = safeDiv 10 0
+    println ("10 / 2: " ++ describe res1) *>
+    println ("10 / 0: " ++ describe res2)
+```
+
+## Let-bindings in IO
+
+Use regular let-bindings for pure computations within IO:
+
+```elara
+let main =
+    getArgs >>= (\args ->
+    let count = length args
+    let message = "Got " ++ toString count ++ " arguments"
+    println message)
+```
+
+## Monadic comprehension notation
+
+Elara supports special syntax for working with monads:
+
+### Let-bang (let!)
+
+Extract values from monadic computations:
+
+```elara
+def sequenceActions : Monad m => [m a] -> m [a]
+let sequenceActions list = match list with
+    [] -> pure []
+    (x:xs) ->
+        let! x' = x
+        let! xs' = sequenceActions xs
+        pure (x' : xs')
+```
+
+### Do-bang (do!)
+
+Execute actions without binding their results:
+
+```elara
+def sequenceActions_ : Monad m => [m a] -> m ()
+let sequenceActions_ list = match list with
+    [] -> pure ()
+    (x:xs) ->
+        do! x
+        sequenceActions_ xs
+```
+
+<Warning>
+  Monadic comprehension syntax is advanced syntax that requires understanding of type classes and monads.
+</Warning>
+
+## Multi-line IO blocks
+
+Use multi-line syntax for complex IO sequences:
+
+```elara
+let main =
+    let! args = getArgs
+    let! content = readFile "data.txt"
+    
+    let processed = processContent content
+    let result = combineResults args processed
+    
+    println result
+```
+
+## The main function
+
+Every Elara program must have a `main` function:
+
+```elara
+def main : IO ()
+let main = println "Hello, World!"
+```
+
+<Note>
+  `main` is the entry point of your program. It must have type `IO ()` and is executed by the runtime.
+</Note>
+
+## Practical patterns
+
+### Error handling with Option
+
+```elara
+def safeReadFile : String -> IO (Option String)
+let safeReadFile path =
+    -- Implementation would catch errors and return None
+    readFile path >>= (\content -> pure (Some content))
+
+let main =
+    safeReadFile "data.txt" >>= (\result ->
+    match result with
+        Some content -> println content
+        None -> println "File not found")
+```
+
+### Composing IO actions
+
+```elara
+def printList : List String -> IO ()
+let printList list =
+    match list with
+        [] -> println "Done"
+        x :: xs ->
+            println x *>
+            printList xs
+
+let main =
+    getArgs >>= printList
+```
+
+### Working with multiple files
+
+```elara
+let main =
+    readFile "file1.txt" >>= (\content1 ->
+    readFile "file2.txt" >>= (\content2 ->
+    let combined = content1 ++ content2
+    println combined))
+```
+
+## Why IO matters
+
+The IO type provides several benefits:
+
+1. **Referential transparency**: Pure functions always return the same output for the same input
+2. **Testability**: Pure functions are easier to test without mocking I/O
+3. **Reasoning**: You can understand code by looking at types
+4. **Safety**: The type system prevents accidental side effects
+
+```elara
+-- This function is guaranteed to be pure
+def calculate : Int -> Int -> Int
+let calculate x y = x + y
+
+-- This function may perform I/O
+def process : Int -> IO Int
+let process x = println x >> pure (x + 1)
+```
+
+<Info>
+  The type system makes side effects explicit, helping you understand and control program behavior.
+</Info>

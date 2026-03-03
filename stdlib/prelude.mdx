@@ -1,0 +1,321 @@
+---
+title: 'Prelude'
+description: 'Core utilities and operators available in every Elara program'
+icon: 'star'
+---
+
+## Overview
+
+The `Prelude` module provides essential operators and utilities that form the foundation of Elara programming. It includes function composition, pipeline operators, and IO sequencing operations.
+
+## Importing
+
+```elara
+import Prelude
+```
+
+The Prelude module is typically imported in most Elara programs alongside `Elara.Prim`.
+
+## Operators
+
+### Pipeline Operator
+
+<ParamField path="|>" type="a -> (a -> b) -> b">
+  Left-associative pipeline operator (fixity 0). Applies a value to a function, enabling readable left-to-right data flow.
+</ParamField>
+
+**Signature:**
+```elara
+def (|>) : a -> (a -> b) -> b
+```
+
+**Description:**
+
+The pipeline operator takes a value and a function, then applies the function to the value. This allows you to write data transformations in a natural left-to-right order.
+
+**Example:**
+
+```elara
+import Prelude
+import List
+import String
+
+let result = [1, 2, 3]
+    |> List.map (\x -> x * 2)      -- [2, 4, 6]
+    |> List.filter (\x -> x > 3)   -- [4, 6]
+    |> List.reverse                -- [6, 4]
+```
+
+<Note>
+  The `|>` operator is left-associative with fixity 0, meaning it binds less tightly than most other operators.
+</Note>
+
+### Function Composition
+
+<ParamField path=">>" type="(a -> b) -> (b -> c) -> (a -> c)">
+  Right-associative function composition. Composes two functions into a new function.
+</ParamField>
+
+**Signature:**
+```elara
+def (>>) : (a -> b) -> (b -> c) -> (a -> c)
+```
+
+**Description:**
+
+Composes two functions, creating a new function that applies the first function and then the second. The output type of the first function must match the input type of the second.
+
+**Example:**
+
+```elara
+import Prelude
+import Elara.Prim
+
+let addOne = \x -> x + 1
+let double = \x -> x * 2
+
+-- Compose: first add one, then double
+let addOneThenDouble = addOne >> double
+
+let result = addOneThenDouble 5  -- 12
+```
+
+<CodeGroup>
+
+```elara Without Composition
+let result = double (addOne 5)
+```
+
+```elara With Composition
+let addOneThenDouble = addOne >> double
+let result = addOneThenDouble 5
+```
+
+</CodeGroup>
+
+### IO Sequencing
+
+<ParamField path="*>" type="IO a -> IO b -> IO b">
+  Right-associative IO sequencing operator (fixity 1). Executes two IO actions in sequence, discarding the first result.
+</ParamField>
+
+**Signature:**
+```elara
+def (*>) : IO a -> IO b -> IO b
+```
+
+**Description:**
+
+Sequences two IO actions, running the first action and discarding its result, then running the second action and returning its result. This is useful for chaining IO operations where you don't need intermediate results.
+
+**Example:**
+
+```elara
+import Prelude
+import Elara.Prim
+
+let main =
+    println "First line" *>
+    println "Second line" *>
+    println "Third line"
+```
+
+<Accordion title="How does *> work?">
+  The `*>` operator is implemented using the bind operator `>>=`:
+  
+  ```elara
+  let (*>) m1 m2 = m1 >>= (\_ -> m2)
+  ```
+  
+  It executes `m1`, ignores its result (using `_`), and then executes `m2`.
+</Accordion>
+
+## Primitive Types and Operations
+
+The Prelude imports `Elara.Prim`, which provides primitive types and operations.
+
+### Basic Types
+
+<Tabs>
+  <Tab title="Numeric">
+    ```elara
+    type Int = Prim_Int
+    type Float = Prim_Float
+    ```
+    
+    **Operators:**
+    - `(+)` : Int -> Int -> Int
+    - `(-)` : Int -> Int -> Int
+    - `(*)` : Int -> Int -> Int
+    - `(/)` : Int -> Int -> Int
+    - `(%)` : Int -> Int -> Int
+    - `negate` : Int -> Int
+  </Tab>
+  
+  <Tab title="Text">
+    ```elara
+    type Char = Prim_Char
+    type String = Prim_String
+    ```
+    
+    **Functions:**
+    - `stringHead` : String -> Char
+    - `stringTail` : String -> String
+    - `stringCons` : Char -> String -> String
+    - `stringIsEmpty` : String -> Bool
+    - `toString` : a -> String
+  </Tab>
+  
+  <Tab title="Boolean">
+    ```elara
+    type Bool = True | False
+    ```
+    
+    **Operators:**
+    - `not` : Bool -> Bool
+    - `(&&)` : Bool -> Bool -> Bool
+    - `(==)` : a -> a -> Bool
+    - `(!=)` : a -> a -> Bool
+  </Tab>
+  
+  <Tab title="Collections">
+    ```elara
+    type List a = Nil | Cons a (List a)
+    type Tuple2 a b = Tuple2 a b
+    ```
+    
+    Lists are defined as recursive algebraic data types with `Nil` and `Cons` constructors.
+  </Tab>
+</Tabs>
+
+### Comparison Operations
+
+```elara
+type Ordering = LT | EQ | GT
+
+def compare : a -> a -> Ordering
+def (<) : a -> a -> Bool
+def (>) : a -> a -> Bool
+def (<=) : a -> a -> Bool
+def (>=) : a -> a -> Bool
+```
+
+**Example:**
+
+```elara
+import Elara.Prim
+
+let x = 5
+let y = 10
+
+let isLess = x < y        -- True
+let ordering = compare x y  -- LT
+```
+
+### IO Operations
+
+<ParamField path="println" type="a -> IO ()">
+  Prints a value to standard output followed by a newline.
+</ParamField>
+
+<ParamField path="readFile" type="String -> IO String">
+  Reads the contents of a file as a string.
+</ParamField>
+
+<ParamField path="getArgs" type="IO (List String)">
+  Gets command-line arguments as a list of strings.
+</ParamField>
+
+<ParamField path=">>=" type="IO a -> (a -> IO b) -> IO b">
+  Monadic bind operator for sequencing IO operations with values.
+</ParamField>
+
+**Example:**
+
+```elara
+import Prelude
+import Elara.Prim
+
+let main =
+    getArgs >>= \args ->
+    println ("Args: " ++ listToString args) *>
+    readFile "example.txt" >>= \content ->
+    println ("File content: " ++ content)
+```
+
+## Error Handling
+
+<ParamField path="error" type="a -> b">
+  Throws a runtime error with the given message. Use sparingly; prefer Result types for recoverable errors.
+</ParamField>
+
+<ParamField path="debugWithMsg" type="String -> a -> a">
+  Prints a debug message and returns the value unchanged. Useful for debugging.
+</ParamField>
+
+**Example:**
+
+```elara
+import Elara.Prim
+
+def safeHead : List a -> a
+let safeHead list =
+    match list with
+        Cons x _ -> x
+        Nil -> error "Cannot get head of empty list"
+
+let debugValue = debugWithMsg "x = " 42  -- Prints "x = 42", returns 42
+```
+
+<Warning>
+  The `error` function causes the program to crash. For recoverable errors, use the `Result` type from the Result module instead.
+</Warning>
+
+## Complete Example
+
+Here's a complete example using various Prelude functions:
+
+```elara
+import Prelude
+import Elara.Prim
+import List
+import String
+
+-- Process numbers: double, filter, and sum
+def processNumbers : List Int -> Int
+let processNumbers nums =
+    let doubled = List.map (\x -> x * 2) nums
+    let filtered = List.filter (\x -> x > 5) doubled
+    let sum = List.fold (\acc x -> acc + x) 0 filtered
+    sum
+
+-- Using pipeline operator for cleaner code
+def processNumbersPipeline : List Int -> Int
+let processNumbersPipeline nums =
+    nums
+    |> List.map (\x -> x * 2)
+    |> List.filter (\x -> x > 5)
+    |> List.fold (\acc x -> acc + x) 0
+
+let main =
+    let numbers = [1, 2, 3, 4, 5]
+    let result = processNumbersPipeline numbers
+    println ("Result: " ++ toString result)
+```
+
+## See Also
+
+<CardGroup cols={2}>
+  <Card title="List Module" icon="list" href="/stdlib/list">
+    Working with lists
+  </Card>
+  <Card title="String Module" icon="text" href="/stdlib/string">
+    String manipulation
+  </Card>
+  <Card title="Result Module" icon="check-circle" href="/stdlib/result">
+    Type-safe error handling
+  </Card>
+  <Card title="Examples" icon="code" href="/examples/hello-world">
+    Real-world usage examples
+  </Card>
+</CardGroup>

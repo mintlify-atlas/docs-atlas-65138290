@@ -1,0 +1,175 @@
+---
+title: Installation
+description: Install Elara and set up your development environment to start building functional programs on the JVM
+---
+
+<Warning>
+  Elara is currently in active development and may be unstable. Make sure to join the [Discord server](https://discord.gg/xu5gSTV) for the latest updates and troubleshooting help.
+</Warning>
+
+## Prerequisites
+
+Before installing Elara, ensure you have the following:
+
+### Java Runtime Environment (JRE)
+
+Elara compiles to JVM bytecode, so you'll need a Java runtime to execute compiled programs.
+
+- **Java 8 or higher** is required
+- You can verify your Java installation by running:
+
+```bash
+java -version
+```
+
+If Java is not installed, download it from:
+- [Oracle JDK](https://www.oracle.com/java/technologies/downloads/)
+- [OpenJDK](https://openjdk.org/install/)
+- [Amazon Corretto](https://aws.amazon.com/corretto/)
+
+### Build tools
+
+To build Elara from source, you'll need:
+
+- **GHC (Glasgow Haskell Compiler)** - Version 9.4 or higher recommended
+- **Cabal** - Haskell's build tool (version 3.0 or higher)
+- **Git** - For cloning the repository
+
+Install GHC and Cabal using [GHCup](https://www.haskell.org/ghcup/) (recommended):
+
+```bash
+curl --proto '=https' --tlsv1.2 -sSf https://get-ghcup.haskell.org | sh
+```
+
+## Building from source
+
+Elara is currently distributed as source code. Follow these steps to build the compiler:
+
+<Steps>
+  <Step title="Clone the repository">
+    Clone the Elara repository from GitHub:
+
+    ```bash
+    git clone https://github.com/ElaraLang/elara.git
+    cd elara
+    ```
+  </Step>
+
+  <Step title="Build the compiler">
+    Use Cabal to build the Elara compiler:
+
+    ```bash
+    cabal build
+    ```
+
+    This will download dependencies and compile the Elara compiler. The first build may take several minutes.
+  </Step>
+
+  <Step title="Build the Java standard library">
+    Elara requires a Java standard library to be compiled before running programs:
+
+    ```bash
+    cd jvm-stdlib
+    javac Elara/Error.java Elara/Func.java Elara/Func2.java Elara/IO.java Elara/Int.java Elara/Prelude.java Elara/Unit.java Elara/Func0.java
+    cd ..
+    ```
+
+    <Note>
+      You'll need to rebuild the standard library whenever you pull updates that modify these files.
+    </Note>
+  </Step>
+
+  <Step title="Run the compiler">
+    You can now run the Elara compiler using Cabal:
+
+    ```bash
+    cabal run elara -- --help
+    ```
+
+    This should display the compiler's help information.
+  </Step>
+</Steps>
+
+## Verify installation
+
+To verify your installation is working correctly:
+
+<CodeGroup>
+
+```bash Basic check
+# Display the compiler help
+cabal run elara -- --help
+```
+
+```bash Version info
+# Check compiler version
+cabal run elara -- --version
+```
+
+</CodeGroup>
+
+You should see output showing the available commands:
+- `build` - Compile an Elara program
+- `run` - Compile and run an Elara program
+
+## Optional: Install globally
+
+For convenience, you can install the Elara executable globally:
+
+```bash
+cabal install
+```
+
+This will install the `elara` binary to `~/.cabal/bin/`. Make sure this directory is in your `PATH`:
+
+```bash
+export PATH="$HOME/.cabal/bin:$PATH"
+```
+
+Add this line to your shell configuration file (`~/.bashrc`, `~/.zshrc`, etc.) to make it permanent.
+
+Once installed globally, you can run:
+
+```bash
+elara --help
+```
+
+## Troubleshooting
+
+### Build fails with dependency errors
+
+If the build fails due to missing dependencies, try updating your package index:
+
+```bash
+cabal update
+cabal build
+```
+
+### Java standard library errors
+
+If you encounter errors about missing Java classes at runtime:
+
+1. Ensure you've compiled the Java standard library (Step 3 above)
+2. Check that you're running programs from the root directory of the Elara repository
+3. Verify the `jvm-stdlib` directory contains `.class` files
+
+### GHC version issues
+
+Elara requires GHC 9.4 or higher. If you have an older version:
+
+```bash
+ghcup install ghc 9.8.1
+ghcup set ghc 9.8.1
+```
+
+## Next steps
+
+Now that you have Elara installed, you're ready to write your first program!
+
+<Card
+  title="Quickstart guide"
+  icon="rocket"
+  href="/quickstart"
+>
+  Learn how to create and run your first Elara program
+</Card>

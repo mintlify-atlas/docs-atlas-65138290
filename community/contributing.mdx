@@ -1,0 +1,333 @@
+---
+title: 'Contributing to Elara'
+description: 'How to contribute to the Elara programming language'
+---
+
+# Contributing to Elara
+
+Thank you for your interest in contributing to Elara! This guide will help you get started.
+
+<Warning>
+  Elara is currently **in active development** and not yet ready for production use. The language is evolving rapidly, and breaking changes are common.
+</Warning>
+
+## Getting Started
+
+### Prerequisites
+
+To build Elara, you'll need:
+
+- **GHC 9.10.1+** - The Glasgow Haskell Compiler
+- **Cabal 3.8+** or **Stack** - Haskell build tools
+- **JDK 8+** - For running compiled Elara programs
+- **Nix** (optional) - For reproducible builds
+
+### Building from Source
+
+<Steps>
+  <Step title="Clone the Repository">
+    ```bash
+    git clone https://github.com/ElaraLang/elara.git
+    cd elara
+    ```
+  </Step>
+  <Step title="Build the Compiler">
+    Using Cabal:
+    ```bash
+    cabal build
+    ```
+    
+    Or using Nix (recommended):
+    ```bash
+    nix develop  # Enter development shell
+    cabal build
+    ```
+  </Step>
+  <Step title="Build the JVM Standard Library">
+    ```bash
+    cd jvm-stdlib
+    javac Elara/Error.java Elara/Func.java Elara/Func2.java \
+          Elara/IO.java Elara/Int.java Elara/Prelude.java \
+          Elara/Unit.java Elara/Func0.java
+    cd ..
+    ```
+  </Step>
+  <Step title="Run Tests">
+    ```bash
+    cabal test
+    ```
+  </Step>
+</Steps>
+
+### Running the Compiler
+
+```bash
+# Compile a program
+cabal run elara -- compile source.elr
+
+# Run the compiled program
+java -cp .:jvm-stdlib Main
+
+# With debug output
+cabal run elara -- compile --dump-core source.elr
+```
+
+## Development Workflow
+
+### Project Structure
+
+```
+elara/
+├── src/
+│   ├── Elara/
+│   │   ├── Lexer/        # Lexical analysis
+│   │   ├── Parser/       # Parsing
+│   │   ├── Desugar/      # Desugaring
+│   │   ├── Rename/       # Name resolution
+│   │   ├── Shunt/        # Operator precedence
+│   │   ├── TypeInfer/    # Type inference
+│   │   ├── Core/         # Core IR
+│   │   ├── JVM/          # JVM code generation
+│   │   └── Query/        # Query system
+│   └── Main.hs           # CLI entry point
+├── test/                 # Test suite
+├── stdlib/               # Elara standard library
+├── jvm-stdlib/           # JVM runtime
+├── specification/        # Language specification
+└── examples/             # Example programs
+```
+
+### Coding Standards
+
+<Accordion title="Haskell Style">
+- Use **fourmolu** for formatting: `fourmolu -i src/`
+- Follow **hlint** suggestions: `hlint src/`
+- Maximum line length: **120 characters**
+- Use explicit type signatures for top-level definitions
+</Accordion>
+
+<Accordion title="Documentation">
+- Add Haddock comments to all exported functions
+- Include examples in documentation where appropriate
+- Document why, not just what
+</Accordion>
+
+<Accordion title="Testing">
+- Add tests for all new features
+- Use golden tests for compiler output
+- Property tests for pure functions when applicable
+</Accordion>
+
+### Making Changes
+
+<Steps>
+  <Step title="Create a Branch">
+    ```bash
+    git checkout -b feature/your-feature-name
+    ```
+  </Step>
+  <Step title="Make Your Changes">
+    Follow the coding standards above.
+  </Step>
+  <Step title="Write Tests">
+    Add tests in the `test/` directory.
+  </Step>
+  <Step title="Run Tests and Linters">
+    ```bash
+    cabal test
+    fourmolu -i src/
+    hlint src/
+    ```
+  </Step>
+  <Step title="Commit Your Changes">
+    ```bash
+    git add .
+    git commit -m "feat: Add your feature"
+    ```
+    
+    Use [conventional commits](https://www.conventionalcommits.org/):
+    - `feat:` - New feature
+    - `fix:` - Bug fix
+    - `docs:` - Documentation changes
+    - `refactor:` - Code refactoring
+    - `test:` - Test additions/changes
+  </Step>
+  <Step title="Push and Create PR">
+    ```bash
+    git push origin feature/your-feature-name
+    ```
+    
+    Then create a pull request on GitHub.
+  </Step>
+</Steps>
+
+## Areas for Contribution
+
+### High Priority
+
+<Accordion title="Standard Library">
+Expand the Elara standard library:
+- Data structures (Map, Set, etc.)
+- String manipulation
+- File I/O
+- Networking (HTTP, etc.)
+</Accordion>
+
+<Accordion title="Tooling">
+- **Language Server Protocol (LSP)** - IDE support
+- **Package Manager** - Dependency management
+- **REPL** - Interactive environment
+- **Formatter** - Code formatting tool
+</Accordion>
+
+<Accordion title="Optimizations">
+- Tail call optimization
+- Inline small functions
+- Specialize polymorphic functions
+- Better closure representation
+</Accordion>
+
+<Accordion title="Language Features">
+- Type classes (in progress)
+- Type aliases (done, but could be improved)
+- Module system improvements
+- Records with row polymorphism (partially done)
+</Accordion>
+
+### Good First Issues
+
+Look for issues labeled **"good first issue"** on GitHub:
+
+- Improve error messages
+- Add examples to documentation
+- Fix compiler warnings
+- Add golden tests for edge cases
+
+## Testing
+
+### Running Tests
+
+```bash
+# Run all tests
+cabal test
+
+# Run specific test suite
+cabal test elara-test --test-show-details=direct
+
+# Run tests matching a pattern
+cabal test --test-option="--match=/TypeInfer/"
+```
+
+### Golden Tests
+
+Elara uses golden tests to verify compiler output:
+
+```haskell
+it "compiles factorial correctly" $ do
+  result <- runCompiler "examples/factorial.elr"
+  result `shouldMatchGolden` "test/golden/factorial.golden"
+```
+
+When the expected output changes, update goldens:
+
+```bash
+cabal test --test-option="--accept"
+```
+
+### Adding New Tests
+
+1. Create a test file in `test/`
+2. Write test cases using Hspec
+3. Add the test module to `elara.cabal`
+
+```haskell
+module Test.TypeInfer.UnificationSpec (spec) where
+
+import Test.Hspec
+import Elara.TypeInfer
+
+spec :: Spec
+spec = describe "Unification" $ do
+  it "unifies identical types" $ do
+    result <- unify (typeInt) (typeInt)
+    result `shouldBe` Right mempty
+```
+
+## Documentation
+
+### Adding Documentation
+
+Documentation is written in MDX (Markdown + JSX) and lives in this repository:
+
+```bash
+# Preview documentation locally
+npm install
+npm run dev
+```
+
+### Documentation Types
+
+- **Tutorials**: Step-by-step guides for beginners
+- **How-To Guides**: Solutions to specific problems
+- **Reference**: Technical documentation of language features
+- **Explanations**: Conceptual discussions
+
+## Community
+
+### Getting Help
+
+<Accordion title="Discord Server">
+Join the [Elara Discord](https://discord.gg/xu5gSTV) for:
+- Questions about contributing
+- Discussions on language design
+- Real-time help with development
+</Accordion>
+
+<Accordion title="GitHub Discussions">
+Use [GitHub Discussions](https://github.com/ElaraLang/elara/discussions) for:
+- Feature proposals
+- Design discussions
+- Show and tell
+</Accordion>
+
+<Accordion title="GitHub Issues">
+Use [GitHub Issues](https://github.com/ElaraLang/elara/issues) for:
+- Bug reports
+- Feature requests
+- Task tracking
+</Accordion>
+
+### Code Review
+
+All contributions go through code review:
+
+- Be respectful and constructive
+- Respond to review comments promptly
+- Don't take criticism personally
+- Ask questions if something is unclear
+
+<Note>
+  Core maintainers will review your PR within a few days. Feel free to ping if you haven't heard back!
+</Note>
+
+## Contributor License Agreement
+
+By contributing to Elara, you agree that your contributions will be licensed under the MIT License.
+
+## Recognition
+
+Contributors are recognized in:
+
+- The [CHANGELOG.md](https://github.com/ElaraLang/elara/blob/main/CHANGELOG.md)
+- GitHub's contributor graph
+- Special thanks in release notes
+
+## Questions?
+
+If you have any questions not covered here:
+
+- Ask on [Discord](https://discord.gg/xu5gSTV)
+- Open a [GitHub Discussion](https://github.com/ElaraLang/elara/discussions)
+- Email the maintainers (see README.md)
+
+Thank you for contributing to Elara! 🎉

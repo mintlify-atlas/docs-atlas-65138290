@@ -1,0 +1,269 @@
+---
+title: 'Custom Data Types'
+description: 'Define and use algebraic data types with pattern matching'
+---
+
+Elara supports algebraic data types (ADTs), allowing you to define custom types that precisely model your domain. ADTs combine with pattern matching for safe and expressive code.
+
+<Steps>
+  <Step title="Simple Algebraic Data Types">
+    Define custom types with multiple variants (also called sum types or tagged unions):
+
+    ```elara pattern_matching.elr
+    import Prelude
+    import Elara.Prim
+    import String
+
+    -- Defines a simple algebraic data type (ADT) for shapes
+    type Shape =
+        Circle Int
+        | Rectangle Int Int
+        | Square Int
+
+    -- Calculates the approximate area of a shape using pattern matching
+    -- We are using Ints for simplicity as Floats are not very well supported yet
+    def area : Shape -> Int
+    let area shape =
+        match shape with
+            Circle r -> 3 * r * r
+            Rectangle w h -> w * h
+            Square s -> s * s
+
+    let main =
+        -- Instantiate the shapes
+        let c = Circle 5
+        let r = Rectangle 4 6
+        let s = Square 3
+        println ("Area of Circle (radius 5): " ++ toString (area c)) >>
+        println ("Area of Rectangle (4x6): " ++ toString (area r)) >>
+        println ("Area of Square (side 3): " ++ toString (area s))
+    ```
+
+    **Expected Output:**
+    ```
+    Area of Circle (radius 5): 75
+    Area of Rectangle (4x6): 24
+    Area of Square (side 3): 9
+    ```
+
+    **How it works:**
+    - `type Shape = ...` defines a new type with three variants
+    - Each variant can carry data: `Circle Int` holds a radius
+    - Pattern matching ensures all cases are handled
+    - The `area` function processes each shape differently
+
+    <Note>
+      The Circle area uses `3 * r * r` as an approximation of π since floating-point support is limited.
+    </Note>
+  </Step>
+
+  <Step title="Option Type">
+    The `Option` type handles values that might be absent, similar to `Maybe` in Haskell or `Option` in Rust:
+
+    ```elara options.elr
+    import Prelude
+    import Elara.Prim
+    import Option
+    import String
+
+    def safeDiv : Int -> Int -> Option Int
+    let safeDiv x y =
+        if y == 0 then
+            None
+        else
+            Some (x / y)
+
+    def describe : Option Int -> String
+    let describe opt =
+        match opt with
+            Some val -> "Got value: " ++ toString val
+            None -> "Got nothing"
+
+    let main =
+        let res1 = safeDiv 10 2
+        let res2 = safeDiv 10 0
+        println ("10 / 2: " ++ describe res1) >>
+        println ("10 / 0: " ++ describe res2)
+    ```
+
+    **Expected Output:**
+    ```
+    10 / 2: Got value: 5
+    10 / 0: Got nothing
+    ```
+
+    **How it works:**
+    - `Option Int` represents a value that might not exist
+    - `Some val` wraps a successful result
+    - `None` represents absence of a value (like null, but type-safe)
+    - `safeDiv` returns `None` instead of crashing on division by zero
+    - Pattern matching forces you to handle both cases
+
+    <Tip>
+      Using `Option` eliminates null pointer errors at compile time. The type system ensures you always handle both success and failure cases.
+    </Tip>
+  </Step>
+
+  <Step title="Polymorphic Data Types">
+    Data types can be generic over type parameters:
+
+    ```elara
+    type Option a = None | Some a
+
+    def map : (a -> b) -> Option a -> Option b
+    let map f opt =
+        match opt with
+            None -> None
+            Some x -> Some (f x)
+
+    def main : IO ()
+    let main = print (map (\x -> x * 2) (Some 3))
+    -- Prints Some 6
+    ```
+
+    **Expected Output:**
+    ```
+    Some 6
+    ```
+
+    **How it works:**
+    - `type Option a` - the type parameter `a` can be any type
+    - `Option Int`, `Option String`, etc. are all valid concrete types
+    - `map` works with any `Option` type, transforming the value inside if present
+    - This is similar to `map` for lists but for optional values
+
+    **Benefits:**
+    - Write generic code once, use it with many types
+    - Type safety: `map` on `Option Int` must return `Option` of some type
+    - No runtime overhead: types are erased after compilation
+  </Step>
+
+  <Step title="Recursive Data Types">
+    Data types can reference themselves, enabling powerful recursive structures:
+
+    ```elara
+    -- A binary tree
+    type Tree a =
+        Leaf
+        | Node a (Tree a) (Tree a)
+
+    def depth : Tree a -> Int
+    let depth tree =
+        match tree with
+            Leaf -> 0
+            Node _ left right ->
+                let leftDepth = depth left
+                let rightDepth = depth right
+                1 + max leftDepth rightDepth
+
+    def main =
+        let tree = Node 5
+                     (Node 3 Leaf Leaf)
+                     (Node 7 Leaf (Node 9 Leaf Leaf))
+        let d = depth tree
+        println ("Tree depth: " ++ toString d)
+    ```
+
+    **Expected Output:**
+    ```
+    Tree depth: 3
+    ```
+
+    **How it works:**
+    - `Tree a` is defined recursively - a `Node` contains two `Tree a` children
+    - `Leaf` is the base case with no children
+    - Pattern matching with `_` ignores the node value
+    - Recursive function processes the tree structure
+
+    <Note>
+      Lists in Elara are also recursive ADTs:
+      ```elara
+      type List a = Nil | Cons a (List a)
+      ```
+    </Note>
+  </Step>
+
+  <Step title="Pattern Matching Best Practices">
+    Pattern matching provides exhaustive case analysis:
+
+    ```elara
+    type Result a b = Ok a | Err b
+
+    def unwrapOr : a -> Result a b -> a
+    let unwrapOr default result =
+        match result with
+            Ok val -> val
+            Err _ -> default
+
+    def isOk : Result a b -> Bool
+    let isOk result =
+        match result with
+            Ok _ -> True
+            Err _ -> False
+    ```
+
+    **Key Benefits:**
+    - **Exhaustiveness**: The compiler ensures all cases are handled
+    - **Safety**: No runtime errors from missing cases
+    - **Refactoring**: Adding a new variant shows all code that needs updating
+    - **Documentation**: Pattern matching makes data flow explicit
+
+    <Tip>
+      Use `_` to ignore values you don't need in a pattern, but be careful not to ignore important information.
+    </Tip>
+  </Step>
+</Steps>
+
+## Common Algebraic Data Types
+
+<CardGroup cols={2}>
+  <Card title="Option" icon="circle-question">
+    Represents a value that might not exist
+    ```elara
+    type Option a = None | Some a
+    ```
+  </Card>
+  
+  <Card title="Result" icon="check-circle">
+    Represents success or failure with error info
+    ```elara
+    type Result a b = Ok a | Err b
+    ```
+  </Card>
+  
+  <Card title="List" icon="list">
+    A recursive sequence of values
+    ```elara
+    type List a = Nil | Cons a (List a)
+    ```
+  </Card>
+  
+  <Card title="Tree" icon="diagram-project">
+    Hierarchical data structure
+    ```elara
+    type Tree a = Leaf | Node a (Tree a) (Tree a)
+    ```
+  </Card>
+</CardGroup>
+
+## Type Definition Syntax
+
+```elara
+type TypeName param1 param2 =
+    Constructor1 Type1 Type2
+    | Constructor2 Type3
+    | Constructor3
+```
+
+**Components:**
+- `TypeName`: The name of your new type
+- `param1 param2`: Optional type parameters for generic types
+- `Constructor1`, `Constructor2`: Variant names (must start with uppercase)
+- `Type1`, `Type2`: The types of data each variant carries
+- `|`: Separates different variants
+
+## Next Steps
+
+- [Pattern Matching](/language/pattern-matching) - Deep dive into pattern matching syntax
+- [Type System](/language/types) - Understanding Elara's type system
+- [Higher-Order Functions](/examples/higher-order-functions) - Use ADTs with higher-order functions

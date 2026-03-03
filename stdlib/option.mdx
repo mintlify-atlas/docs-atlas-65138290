@@ -1,0 +1,399 @@
+---
+title: 'Option Type'
+description: 'Safe handling of optional values in Elara'
+icon: 'question'
+---
+
+## Overview
+
+The `Option` type provides a type-safe way to represent values that may or may not be present, eliminating the need for null values and preventing null pointer errors at compile time.
+
+## Type Definition
+
+```elara
+type Option a = Some a | None
+```
+
+**Constructors:**
+- `Some a` - Represents a value that is present
+- `None` - Represents the absence of a value
+
+## Importing
+
+```elara
+import Option
+```
+
+## Why Option?
+
+<Tabs>
+  <Tab title="Problem">
+    In many languages, the absence of a value is represented by `null` or `nil`, leading to runtime errors:
+    
+    ```javascript
+    // JavaScript - runtime error!
+    let user = getUser(id);  // might be null
+    console.log(user.name);  // crashes if user is null
+    ```
+  </Tab>
+  
+  <Tab title="Solution">
+    Elara uses the `Option` type to make optionality explicit in the type system:
+    
+    ```elara
+    -- Elara - compile-time safety!
+    def getUser : Int -> Option User
+    
+    let user = getUser id
+    match user with
+        Some u -> println u.name  -- Safe: u is guaranteed to exist
+        None -> println "User not found"
+    ```
+  </Tab>
+</Tabs>
+
+## Creating Option Values
+
+```elara
+import Option
+import Elara.Prim
+
+-- Explicit construction
+let hasValue : Option Int = Some 42
+let noValue : Option Int = None
+
+-- From computation
+def safeDiv : Int -> Int -> Option Int
+let safeDiv x y =
+    if y == 0 then
+        None
+    else
+        Some (x / y)
+
+let result1 = safeDiv 10 2   -- Some 5
+let result2 = safeDiv 10 0   -- None
+```
+
+## Functions
+
+### isSome
+
+<ParamField path="isSome" type="Option a -> Bool">
+  Returns `True` if the option contains a value, `False` otherwise.
+</ParamField>
+
+**Signature:**
+```elara
+def isSome : Option a -> Bool
+```
+
+**Description:**
+
+Checks whether an Option contains a value (is `Some`) or is empty (is `None`).
+
+**Example:**
+
+```elara
+import Option
+
+let x = Some 42
+let y = None
+
+let hasX = isSome x  -- True
+let hasY = isSome y  -- False
+```
+
+**Implementation:**
+```elara
+let isSome opt =
+    match opt with
+        Some _ -> True
+        None -> False
+```
+
+<Accordion title="When to use isSome">
+  Use `isSome` when you only need to check for presence without accessing the value. For most cases, pattern matching is more idiomatic as it lets you safely extract the value:
+  
+  ```elara
+  -- Less idiomatic
+  if isSome opt then
+      -- Still need to pattern match to get value
+      match opt with Some x -> ...
+  
+  -- More idiomatic
+  match opt with
+      Some x -> ...  -- Handle value
+      None -> ...     -- Handle absence
+  ```
+</Accordion>
+
+## Pattern Matching
+
+The most common way to work with Option values is through pattern matching:
+
+### Basic Pattern Matching
+
+```elara
+import Option
+import String
+import Elara.Prim
+
+def describe : Option Int -> String
+let describe opt =
+    match opt with
+        Some val -> "Got value: " ++ toString val
+        None -> "Got nothing"
+
+let msg1 = describe (Some 42)  -- "Got value: 42"
+let msg2 = describe None        -- "Got nothing"
+```
+
+### Nested Options
+
+```elara
+import Option
+
+type User = User String (Option String)  -- name, optional email
+
+def getUserEmail : Option User -> Option String
+let getUserEmail opt =
+    match opt with
+        None -> None
+        Some (User _ email) -> email
+
+let user = Some (User "Alice" (Some "alice@example.com"))
+let email = getUserEmail user  -- Some "alice@example.com"
+```
+
+### Default Values
+
+```elara
+import Option
+
+def getOrDefault : a -> Option a -> a
+let getOrDefault default opt =
+    match opt with
+        Some x -> x
+        None -> default
+
+let value = getOrDefault 0 (Some 42)  -- 42
+let value2 = getOrDefault 0 None      -- 0
+```
+
+## Common Patterns
+
+### Safe Division
+
+```elara
+import Option
+import Elara.Prim
+
+def safeDiv : Int -> Int -> Option Int
+let safeDiv x y =
+    if y == 0 then
+        None
+    else
+        Some (x / y)
+
+-- Usage
+let result = safeDiv 10 2
+match result with
+    Some quotient -> println ("Result: " ++ toString quotient)
+    None -> println "Cannot divide by zero"
+```
+
+### Safe List Head
+
+```elara
+import Option
+import Elara.Prim
+
+def safeHead : List a -> Option a
+let safeHead list =
+    match list with
+        Nil -> None
+        Cons x _ -> Some x
+
+let first = safeHead [1, 2, 3]  -- Some 1
+let empty = safeHead []          -- None
+```
+
+### Chaining Operations
+
+```elara
+import Option
+
+-- Map over Option (if you define map)
+def mapOption : (a -> b) -> Option a -> Option b
+let mapOption f opt =
+    match opt with
+        Some x -> Some (f x)
+        None -> None
+
+-- Flatten nested Options
+def flatten : Option (Option a) -> Option a
+let flatten opt =
+    match opt with
+        Some inner -> inner
+        None -> None
+
+-- Chain operations
+let result = Some 5
+    |> mapOption (\x -> x * 2)      -- Some 10
+    |> mapOption (\x -> x + 1)      -- Some 11
+```
+
+## Complete Example
+
+Here's a complete example from the Elara examples directory:
+
+```elara
+import Prelude
+import Elara.Prim
+import Option
+import String
+
+def safeDiv : Int -> Int -> Option Int
+let safeDiv x y =
+    if y == 0 then
+        None
+    else
+        Some (x / y)
+
+def describe : Option Int -> String
+let describe opt =
+    match opt with
+        Some val -> "Got value: " ++ toString val
+        None -> "Got nothing"
+
+let main =
+    let res1 = safeDiv 10 2
+    let res2 = safeDiv 10 0
+    println ("10 / 2: " ++ describe res1) >>
+    println ("10 / 0: " ++ describe res2)
+
+-- Output:
+-- 10 / 2: Got value: 5
+-- 10 / 0: Got nothing
+```
+
+## Advanced Patterns
+
+### Option Combinators
+
+```elara
+import Option
+
+-- Map: Transform the value inside an Option
+def map : (a -> b) -> Option a -> Option b
+let map f opt =
+    match opt with
+        Some x -> Some (f x)
+        None -> None
+
+-- Bind: Chain operations that return Options
+def bind : Option a -> (a -> Option b) -> Option b
+let bind opt f =
+    match opt with
+        Some x -> f x
+        None -> None
+
+-- Filter: Keep only values that satisfy a predicate
+def filter : (a -> Bool) -> Option a -> Option a
+let filter p opt =
+    match opt with
+        Some x -> if p x then Some x else None
+        None -> None
+```
+
+### Combining Multiple Options
+
+```elara
+import Option
+
+-- Combine two Options with a function
+def map2 : (a -> b -> c) -> Option a -> Option b -> Option c
+let map2 f optA optB =
+    match (optA, optB) with
+        (Some a, Some b) -> Some (f a b)
+        _ -> None
+
+-- Example: Add two optional numbers
+let sum = map2 (\x y -> x + y) (Some 5) (Some 10)  -- Some 15
+let noSum = map2 (\x y -> x + y) (Some 5) None     -- None
+```
+
+### Option to Result Conversion
+
+```elara
+import Option
+import Result
+
+def optionToResult : e -> Option a -> Result e a
+let optionToResult err opt =
+    match opt with
+        Some x -> Ok x
+        None -> Err err
+
+let result = optionToResult "Value not found" (Some 42)
+-- Ok 42
+
+let result2 = optionToResult "Value not found" None
+-- Err "Value not found"
+```
+
+## Best Practices
+
+<Note>
+  **Use Option when:**
+  - A value may legitimately be absent
+  - You want to avoid null pointer errors
+  - The absence of a value is not an error condition
+  - You want compile-time guarantees about handling missing values
+</Note>
+
+<Warning>
+  **Don't use Option when:**
+  - The absence of a value represents an error (use `Result` instead)
+  - You need to provide error information (use `Result` instead)
+  - You're working with IO operations that might fail (use `Result` instead)
+</Warning>
+
+## Comparison with Result
+
+<CodeGroup>
+
+```elara Using Option
+-- Use Option when absence is not an error
+def findUser : String -> Option User
+let findUser name =
+    -- Returns None if user not found
+    -- This is expected, not an error
+```
+
+```elara Using Result
+-- Use Result when absence is an error
+def loadUser : String -> Result String User
+let loadUser name =
+    -- Returns Err msg if user not found
+    -- Provides error information
+```
+
+</CodeGroup>
+
+## See Also
+
+<CardGroup cols={2}>
+  <Card title="Result Type" icon="check-circle" href="/stdlib/result">
+    Error handling with error information
+  </Card>
+  <Card title="Pattern Matching" icon="code" href="/language/pattern-matching">
+    Learn pattern matching syntax
+  </Card>
+  <Card title="Type System" icon="cube" href="/language/type-system">
+    Understanding Elara's type system
+  </Card>
+  <Card title="Examples" icon="book" href="/examples/hello-world">
+    See Option in real examples
+  </Card>
+</CardGroup>

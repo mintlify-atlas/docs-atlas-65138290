@@ -1,0 +1,111 @@
+---
+title: 'Hello World'
+description: 'Your first Elara program - a simple Hello World example'
+---
+
+The classic Hello World program is the perfect starting point for learning Elara. This example demonstrates the basic structure of an Elara program and how to perform simple output.
+
+<Steps>
+  <Step title="Basic Hello World">
+    The simplest Elara program that prints output:
+
+    ```elara
+    def main : IO ()
+    let main = print "Hello, World!"
+    ```
+
+    **What this does:**
+    - `def main : IO ()` declares the type signature for `main` as an IO action that returns unit (nothing)
+    - `let main = print "Hello, World!"` defines the main function that prints the string
+    - The `print` function comes from the standard library and outputs text
+
+    **Expected Output:**
+    ```
+    Hello, World!
+    ```
+
+    <Note>
+      Every Elara program must have a `main` function of type `IO ()` as the entry point.
+    </Note>
+  </Step>
+
+  <Step title="Using println">
+    You can also use `println` to automatically add a newline:
+
+    ```elara
+    import Prelude
+    import Elara.Prim
+
+    def main : IO ()
+    let main = println "Hello, World!"
+    ```
+
+    **Expected Output:**
+    ```
+    Hello, World!
+
+    ```
+
+    <Tip>
+      `println` is preferred over `print` in most cases as it adds a newline character automatically.
+    </Tip>
+  </Step>
+
+  <Step title="String Concatenation">
+    You can build more complex strings using the `++` operator:
+
+    ```elara
+    import Prelude
+    import Elara.Prim
+    import String
+
+    def main : IO ()
+    let main =
+        let name = "Elara"
+        let version = "0.1"
+        println ("Welcome to " ++ name ++ " v" ++ version ++ "!")
+    ```
+
+    **Expected Output:**
+    ```
+    Welcome to Elara v0.1!
+    ```
+
+    **Key Concepts:**
+    - The `++` operator concatenates strings
+    - Local bindings use `let` expressions
+    - The `String` module provides string utilities
+  </Step>
+
+  <Step title="Working with Numbers">
+    Converting numbers to strings for display:
+
+    ```elara
+    import Prelude
+    import Elara.Prim
+    import String
+
+    def main : IO ()
+    let main =
+        let answer = 42
+        println ("The answer is: " ++ toString answer)
+    ```
+
+    **Expected Output:**
+    ```
+    The answer is: 42
+    ```
+
+    **Key Concepts:**
+    - `toString` converts integers to strings for concatenation
+    - Numeric literals are inferred as `Int` by default
+  </Step>
+</Steps>
+
+## Next Steps
+
+Now that you understand the basics, explore more advanced examples:
+
+- [Recursion](/examples/recursion) - Learn how to write recursive functions
+- [Higher-Order Functions](/examples/higher-order-functions) - Functions that take other functions as arguments
+- [Data Types](/examples/data-types) - Define custom algebraic data types

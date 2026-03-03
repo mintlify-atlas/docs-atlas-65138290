@@ -1,0 +1,263 @@
+---
+title: Functions
+description: Learn how to define and use functions in Elara, including currying, higher-order functions, and partial application
+---
+
+Functions are first-class citizens in Elara. Every function takes exactly one argument and returns one value, with multi-argument functions achieved through currying.
+
+## Function definitions
+
+Functions are defined with a type signature (`def`) followed by an implementation (`let`):
+
+```elara
+def add : Int -> Int -> Int
+let add x y = x + y
+
+def greeting : String -> String
+let greeting name = "Hello, " ++ name
+```
+
+<Note>
+  The `def` keyword declares the type, while `let` provides the implementation. Both are required for top-level functions.
+</Note>
+
+## Function application
+
+Functions are applied using juxtaposition (space-separated):
+
+```elara
+def add : Int -> Int -> Int
+let add x y = x + y
+
+let main = println (add 2 3)  -- Prints 5
+```
+
+Parentheses control application order:
+
+```elara
+def result1 : Int
+let result1 = add 2 (add 3 4)  -- 2 + (3 + 4) = 9
+
+def result2 : Int
+let result2 = add (add 2 3) 4  -- (2 + 3) + 4 = 9
+```
+
+## Lambda expressions
+
+Anonymous functions use backslash `\` syntax:
+
+```elara
+def double : Int -> Int
+let double = \x -> x * 2
+
+def add : Int -> Int -> Int
+let add = \x -> \y -> x + y
+
+let main = println (map (\x -> x * x) [1, 2, 3])
+```
+
+From the real examples:
+
+```elara
+def map : (a -> b) -> List a -> List b
+let map f list =
+    match list with
+        Nil -> Nil
+        Cons x xs -> Cons (f x) (map f xs)
+
+let main =
+    let numbers = [1, 2, 3, 4, 5]
+    let squared = map (\x -> x * x) numbers
+    println (listToString squared)
+```
+
+## Currying and partial application
+
+All functions in Elara are automatically curried. Multi-argument functions are actually single-argument functions returning functions:
+
+```elara
+def add : Int -> Int -> Int
+let add x y = x + y
+
+-- Partial application
+let addFive : Int -> Int
+let addFive = add 5
+
+let result : Int
+let result = addFive 10  -- 15
+```
+
+Real-world example:
+
+```elara
+def multiply : Int -> Int -> Int
+let multiply x y = x * y
+
+let main =
+    -- Partial application
+    let addFive = add 5
+    let double = multiply 2
+    
+    -- Function chaining
+    let result = addFive (double 10)
+    
+    println ("(10 * 2) + 5 = " ++ toString result)  -- 25
+```
+
+<Info>
+  The type `Int -> Int -> Int` is actually `Int -> (Int -> Int)`, meaning a function that takes an `Int` and returns another function.
+</Info>
+
+## Higher-order functions
+
+Functions can accept other functions as arguments or return them as results:
+
+```elara
+def apply : (a -> b) -> a -> b
+let apply f x = f x
+
+def compose : (b -> c) -> (a -> b) -> (a -> c)
+let compose g f = \x -> g (f x)
+```
+
+Examples from the standard library:
+
+```elara
+def map : (a -> b) -> List a -> List b
+let map f list =
+    match list with
+        Nil -> Nil
+        Cons x xs -> Cons (f x) (map f xs)
+
+def filter : (a -> Bool) -> List a -> List a
+let filter p list =
+    match list with
+        Nil -> Nil
+        Cons x xs ->
+            if p x then
+                Cons x (filter p xs)
+            else
+                filter p xs
+```
+
+### Using higher-order functions
+
+```elara
+let main =
+    let numbers = [1, 2, 3, 4, 5]
+    
+    let squared = map (\x -> x * x) numbers
+    let large = filter (\x -> x > 3) squared
+    
+    println ("Original: " ++ listToString numbers) >>
+    println ("Squared: " ++ listToString squared) >>
+    println ("> 3: " ++ listToString large)
+```
+
+## Recursion
+
+Elara supports recursive functions naturally:
+
+```elara
+def factorial : Int -> Int
+let factorial n = if n == 0 then 1 else n * factorial (n - 1)
+
+def fib : Int -> Int
+let fib n =
+    if n <= 1 then n
+    else fib (n - 1) + fib (n - 2)
+```
+
+Recursion on lists:
+
+```elara
+def sum : List Int -> Int
+let sum ls =
+    match ls with
+        [] -> 0
+        x::xs -> x + sum xs
+
+def length : List a -> Int
+let length list =
+    match list with
+        Nil -> 0
+        Cons x xs -> 1 + length xs
+```
+
+<Warning>
+  Elara does not currently optimize tail recursion. Be mindful of stack depth with deeply recursive functions.
+</Warning>
+
+## Operators as functions
+
+Infix operators are functions and can be used as such:
+
+```elara
+-- Using (+) as a prefix function
+def add : Int -> Int -> Int
+let add = (+)
+
+-- Partially applying an operator
+def increment : Int -> Int
+let increment = (+) 1
+```
+
+From the standard library:
+
+```elara
+-- Pipe operator
+def (|>) : a -> (a -> b) -> b
+let (|>) x f = f x
+
+-- Function composition
+def (>>) : (a -> b) -> (b -> c) -> (a -> c)
+let (>>) f g = \x -> g (f x)
+```
+
+## Function chaining
+
+Use the pipe operator `|>` for readable function chains:
+
+```elara
+let main =
+    let result = 42
+        |> (\x -> x + 1)
+        |> (\x -> x * 2)
+        |> toString
+    println result  -- Prints "86"
+```
+
+Example from source:
+
+```elara
+let main = 
+    let identity = makeIdentity i
+    toString (identity + 1) |> println
+```
+
+## Local functions
+
+Define functions locally with `let ... in` expressions:
+
+```elara
+def calculate : Int -> Int
+let calculate n =
+    let helper x = x * 2
+    let another y = y + 1
+    helper (another n)
+```
+
+Real example:
+
+```elara
+def listToString : List a -> String
+let listToString l =
+    let listToStringGo l_ =
+        match l_ with
+            Nil -> ""
+            Cons x Nil -> toString x
+            Cons x xs -> toString x ++ ", " ++ listToStringGo xs
+    match l with
+        Nil -> "[]"
+        Cons x xs -> "[" ++ listToStringGo (Cons x xs) ++ "]"
+```

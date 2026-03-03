@@ -1,0 +1,263 @@
+---
+title: Type system basics
+description: Understand Elara's fundamental types, type annotations, and type inference
+---
+
+Elara features a strong, static type system based on Hindley-Milner type inference. Types are checked at compile time, ensuring type safety without requiring explicit type annotations everywhere.
+
+## Type annotations
+
+While Elara can infer most types, you can (and should) provide explicit type signatures for top-level declarations:
+
+```elara
+def add : Int -> Int -> Int
+let add x y = x + y
+
+def greeting : String
+let greeting = "Hello"
+```
+
+<Note>
+  Type signatures use `def` followed by the name, a colon, and the type. The implementation uses `let`.
+</Note>
+
+## Primitive types
+
+Elara provides several built-in primitive types:
+
+### Int
+
+Integer numbers:
+
+```elara
+def age : Int
+let age = 25
+
+def negative : Int
+let negative = -42
+```
+
+### Float
+
+Floating-point numbers:
+
+```elara
+def pi : Float
+let pi = 3.14159
+```
+
+### String
+
+Text values:
+
+```elara
+def name : String
+let name = "Alice"
+```
+
+### Char
+
+Single characters:
+
+```elara
+def letter : Char
+let letter = 'a'
+```
+
+### Bool
+
+Boolean values:
+
+```elara
+def isValid : Bool
+let isValid = True
+```
+
+### Unit
+
+The unit type `()` represents no meaningful value:
+
+```elara
+def doNothing : ()
+let doNothing = ()
+```
+
+## Function types
+
+Functions are first-class values with types written using the arrow `->` operator:
+
+```elara
+-- Function taking one Int and returning an Int
+def increment : Int -> Int
+let increment n = n + 1
+
+-- Function taking two arguments
+def add : Int -> Int -> Int
+let add x y = x + y
+
+-- Higher-order function
+def apply : (a -> b) -> a -> b
+let apply f x = f x
+```
+
+<Info>
+  All functions in Elara are curried. `Int -> Int -> Int` is actually `Int -> (Int -> Int)`, meaning you can partially apply functions.
+</Info>
+
+## Compound types
+
+### List
+
+Lists are homogeneous collections of values:
+
+```elara
+def numbers : List Int
+let numbers = [1, 2, 3, 4, 5]
+
+def names : List String
+let names = ["Alice", "Bob", "Charlie"]
+
+def emptyList : List a
+let emptyList = []
+```
+
+### Tuple
+
+Tuples contain a fixed number of heterogeneous values:
+
+```elara
+def pair : (Int, String)
+let pair = (42, "answer")
+
+def triple : (Int, Bool, String)
+let triple = (1, True, "test")
+
+def nested : ((Int, Int), String)
+let nested = ((1, 2), "coordinates")
+```
+
+### Record
+
+Records are first-class types with named fields:
+
+```elara
+def person : { name: String, age: Int }
+let person = { name = "Alice", age = 30 }
+
+def point : { x: Int, y: Int }
+let point = { x = 10, y = 20 }
+```
+
+## Type variables
+
+Type variables (also called generic types) are lowercase identifiers that represent any type:
+
+```elara
+-- Identity function works for any type
+def id : a -> a
+let id x = x
+
+-- The type of the first element in a tuple
+def fst : (a, b) -> a
+let fst pair = match pair with
+    (x, y) -> x
+```
+
+## Polymorphism
+
+Elara supports parametric polymorphism through type variables:
+
+```elara
+def map : (a -> b) -> List a -> List b
+let map f list =
+    match list with
+        [] -> []
+        x :: xs -> f x :: map f xs
+
+def length : List a -> Int
+let length list =
+    match list with
+        [] -> 0
+        x :: xs -> 1 + length xs
+```
+
+<Note>
+  The type variable `a` can be instantiated to any concrete type like `Int`, `String`, or even another polymorphic type.
+</Note>
+
+## Type inference
+
+Elara can infer types automatically in most cases:
+
+```elara
+-- Type is inferred as Int -> Int
+let double x = x * 2
+
+-- Type is inferred as List Int
+let numbers = [1, 2, 3]
+
+-- Type is inferred as (a -> b) -> a -> b
+let apply f x = f x
+```
+
+<Warning>
+  While type inference is powerful, it's best practice to provide explicit type signatures for top-level functions to improve code clarity and error messages.
+</Warning>
+
+## The forall quantifier
+
+Polymorphic types use universal quantification, which can be written explicitly:
+
+```elara
+-- Explicit forall (optional)
+def id : forall a. a -> a
+let id x = x
+
+-- Implicit forall (preferred)
+def id : a -> a
+let id x = x
+```
+
+## Type aliases
+
+Create synonyms for existing types:
+
+```elara
+type alias Name = String
+
+type alias Age = Int
+
+type alias Person = { name: Name, age: Age }
+```
+
+From the real examples:
+
+```elara
+type Number = Int
+
+def assertNumber : Int -> Number
+let assertNumber n = n
+
+-- Type aliases with parameters
+type Identity s = s
+
+def makeIdentity : a -> Identity a
+let makeIdentity x = x
+```
+
+## IO type
+
+The `IO` type represents computations with side effects:
+
+```elara
+def main : IO ()
+let main = println "Hello, World!"
+
+def readAndPrint : IO ()
+let readAndPrint = 
+    getArgs >>= (\args -> println (toString args))
+```
+
+<Info>
+  Values of type `IO a` represent actions that, when executed, will produce a value of type `a` and may perform I/O operations.
+</Info>

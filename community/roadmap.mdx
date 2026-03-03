@@ -1,0 +1,375 @@
+---
+title: 'Elara Roadmap'
+description: 'Future plans and development milestones for Elara'
+---
+
+# Elara Roadmap
+
+This roadmap outlines planned features and improvements for the Elara programming language. Elara is under **active development**, and priorities may shift based on community feedback and technical constraints.
+
+<Warning>
+  Elara is **not yet ready for production use**. The language specification and compiler implementation are still evolving rapidly.
+</Warning>
+
+## Current Status (v0.1.x)
+
+Elara currently supports:
+
+✅ Hindley-Milner type inference with let-polymorphism  
+✅ Algebraic data types (sum and product types)  
+✅ Pattern matching with exhaustiveness checking  
+✅ First-class functions and closures  
+✅ JVM bytecode compilation  
+✅ Lightweight (indentation-based) syntax  
+✅ Module system with imports  
+✅ Type aliases (including recursive)  
+✅ Tuple types  
+✅ Basic IO monad  
+✅ Primitive operations (arithmetic, string manipulation)  
+
+## Short Term (Next 3-6 Months)
+
+### Type Classes
+
+<Accordion title="Status: In Progress">
+Implement a type class system for ad-hoc polymorphism:
+
+```elara
+type class Eq a where
+  (==) : a -> a -> Bool
+  (/=) : a -> a -> Bool
+  
+  -- Default implementation
+  let x /= y = not (x == y)
+
+instance Eq Int where
+  let (==) = primIntEq
+
+instance Eq a => Eq (List a) where
+  let [] == [] = True
+  let (x::xs) == (y::ys) = x == y && xs == ys
+  let _ == _ = False
+```
+
+**Challenges:**
+- Dictionary passing for type class methods
+- Superclasses and default methods
+- Coherence (no overlapping instances)
+</Accordion>
+
+### Standard Library Expansion
+
+<Accordion title="Status: Ongoing">
+Expand the Elara standard library with commonly-used modules:
+
+- **Data.List** - List operations (map, filter, fold, etc.)
+- **Data.Map** - Associative maps
+- **Data.Set** - Sets
+- **Data.String** - String manipulation
+- **System.IO** - File I/O operations
+- **System.Environment** - Environment variables, command-line args
+
+**Progress:**
+- ✅ Basic list operations (map, filter, foldl, foldr)
+- ✅ String operations (cons, head, tail, isEmpty)
+- 🔄 Result type for error handling
+- 🔄 Tuple utilities
+- ❌ Map/Set implementations
+- ❌ File I/O
+</Accordion>
+
+### Error Message Improvements
+
+<Accordion title="Status: Ongoing">
+Continuously improve compiler error messages:
+
+**Recent improvements:**
+- ✅ Better type mismatch errors with inference context
+- ✅ Constructor arity mismatch errors
+- ✅ Clearer pattern match errors
+
+**Planned:**
+- More helpful "did you mean?" suggestions
+- Show type variable constraints in errors
+- Better error spans (highlight exact problem location)
+- Suggest imports when name is not in scope
+</Accordion>
+
+## Medium Term (6-12 Months)
+
+### Tail Call Optimization
+
+<Accordion title="Status: Planned">
+Eliminate tail calls to prevent stack overflow in recursive functions:
+
+```elara
+-- Currently causes stack overflow for large n
+let factorial n acc = 
+  if n == 0 
+    then acc 
+    else factorial (n - 1) (n * acc)
+```
+
+**Approach:**
+- Detect tail-recursive functions
+- Transform to while loops in JVM bytecode
+- Support mutual tail recursion
+</Accordion>
+
+### Language Server Protocol (LSP)
+
+<Accordion title="Status: Planned">
+Implement an LSP server for IDE integration:
+
+**Features:**
+- Syntax highlighting
+- Autocomplete
+- Go to definition
+- Find references
+- Inline type information
+- Error diagnostics
+- Code actions (e.g., "add import")
+
+**Target IDEs:**
+- VS Code (priority)
+- IntelliJ IDEA
+- Vim/Neovim
+- Emacs
+</Accordion>
+
+### Module System Enhancements
+
+<Accordion title="Status: Planned">
+Improve the module system:
+
+**Planned features:**
+- Re-exports: `module X (module Y)` exports everything from Y
+- Qualified re-exports: `module X (Y.foo)`
+- Module signatures (for separate compilation)
+- Private declarations (internal to module)
+
+**Under consideration:**
+- First-class modules (ML-style)
+- Module functors (parameterized modules)
+</Accordion>
+
+### Performance Optimizations
+
+<Accordion title="Status: Ongoing">
+Optimize generated JVM bytecode:
+
+**Completed:**
+- ✅ Type inference performance (300% speedup)
+- ✅ Closure lifting
+
+**Planned:**
+- Inline small functions
+- Specialize polymorphic functions at call sites
+- Unbox primitive types (avoid Integer wrapper)
+- Optimize pattern matching (decision trees)
+- Dead code elimination (more aggressive)
+- Constant folding
+</Accordion>
+
+## Long Term (12+ Months)
+
+### Higher-Rank Types
+
+<Accordion title="Status: Research">
+Full support for rank-n types:
+
+```elara
+-- Rank-2 type: forall is not at the top level
+let runST : (forall s. ST s a) -> a
+
+-- Can't escape with the 's' type variable
+let example = runST (\s -> newRef s 42)
+```
+
+**Challenges:**
+- Bidirectional type checking
+- Type inference with higher-rank types
+- Integration with existing inference engine
+</Accordion>
+
+### Dependent Types (Experimental)
+
+<Accordion title="Status: Research">
+Explore limited dependent types:
+
+```elara
+-- Length-indexed vectors
+type Vec : Nat -> Type -> Type
+
+def head : forall n a. Vec (S n) a -> a
+
+def safeHead : Vec n a -> Option a
+let safeHead v = 
+  match v with
+    Nil -> None
+    Cons x _ -> Some x
+```
+
+**Challenges:**
+- Type-level computation
+- Proof irrelevance
+- Runtime type erasure vs. type information preservation
+- JVM target limitations
+
+<Warning>
+  Dependent types are a long-term research goal and may not be feasible given JVM constraints.
+</Warning>
+</Accordion>
+
+### Native Java Interop
+
+<Accordion title="Status: Planned">
+Direct interoperability with Java libraries:
+
+```elara
+import java Java.Util.ArrayList as ArrayList
+
+let createList : IO (ArrayList Int)
+let createList = do
+  list <- ArrayList.new
+  list.add 1
+  list.add 2
+  pure list
+```
+
+**Challenges:**
+- FFI syntax design
+- Type mapping (Java generics ↔ Elara polymorphism)
+- Null safety
+- Exception handling
+- Mutable state in pure language
+</Accordion>
+
+### Package Manager
+
+<Accordion title="Status: Planned">
+Development of a package manager for Elara:
+
+**Features:**
+- Package registry (similar to Hackage, npm)
+- Dependency resolution
+- Version management
+- Build tool integration
+- Private packages
+
+**Design:**
+- Packages defined by `elara.json`
+- Semantic versioning
+- Lock files for reproducible builds
+</Accordion>
+
+### Effect System
+
+<Accordion title="Status: Research">
+Explore algebraic effects and handlers:
+
+```elara
+effect State s where
+  get : s
+  put : s -> ()
+
+let counter : Int
+let counter = 
+  handle
+    let x = get
+    put (x + 1)
+    get
+  with
+    get -> \k -> \s -> k s s
+    put s' -> \k -> \_ -> k () s'
+  with 0
+```
+
+**Benefits:**
+- More flexible than monads
+- Composable effects
+- Efficient implementation
+
+**Challenges:**
+- Type inference
+- JVM implementation (continuation passing?)
+- Effect polymorphism
+</Accordion>
+
+### Alternative Backends
+
+<Accordion title="Status: Research">
+Explore additional compilation targets:
+
+**Potential targets:**
+- **Native code** (via LLVM)
+  - Better performance
+  - No JVM dependency
+  - Smaller binaries
+- **JavaScript** (via Node.js or browser)
+  - Web development
+  - Isomorphic applications
+- **WebAssembly**
+  - Browser and server
+  - Near-native performance
+
+<Note>
+  The JVM backend will remain the primary target for the foreseeable future.
+</Note>
+</Accordion>
+
+## Recent Milestones (Completed)
+
+### 2024
+
+- ✅ Query system integration (Rock) - Enables incremental compilation
+- ✅ Closure lifting - Proper lambda lifting with environment capture
+- ✅ ANF conversion - A-Normal Form for optimization
+- ✅ Tuple types - First-class tuples with pattern matching
+- ✅ Type aliases - Including recursive type aliases
+- ✅ Module system - Hierarchical modules with imports
+- ✅ Qualified imports - Import specific names from modules
+- ✅ Improved pattern matching - Better compilation and exhaustiveness
+- ✅ Core type checking - Verify correctness of Core IR
+- ✅ JVM IR - High-level intermediate representation
+- ✅ Lightweight syntax - Indentation-based layout
+- ✅ Better error messages - Context-aware type errors
+
+### 2023
+
+- ✅ Initial compiler implementation
+- ✅ Hindley-Milner type inference
+- ✅ JVM bytecode generation
+- ✅ Basic standard library
+- ✅ Pattern matching
+- ✅ Algebraic data types
+
+## Community Requests
+
+Features requested by the community (not yet prioritized):
+
+- Do notation for monads
+- List comprehensions
+- Record updates (`{ person | age = 30 }`)
+- Operator sections (`(+ 1)`, `(1 +)`)
+- Anonymous records/extensible records
+- Type-directed name resolution
+- Derive clauses (auto-generate type class instances)
+- Partial application syntax sugar
+
+<Note>
+  Have a feature request? Open a [GitHub Discussion](https://github.com/ElaraLang/elara/discussions) or chat on [Discord](https://discord.gg/xu5gSTV)!
+</Note>
+
+## Contributing to the Roadmap
+
+Interested in helping implement these features?
+
+1. Check the [contributing guide](/community/contributing)
+2. Look for issues tagged with the feature name
+3. Join the [Discord](https://discord.gg/xu5gSTV) to discuss implementation
+4. Open a PR with your changes!
+
+## Changelog
+
+For a detailed history of completed changes, see the [CHANGELOG.md](https://github.com/ElaraLang/elara/blob/main/CHANGELOG.md) in the repository.
