@@ -1,0 +1,108 @@
+{
+  "projectType": "cli-tool",
+  "projectName": "Elara",
+  "projectDescription": "A purely functional programming language targeting the JVM with Hindley-Milner type inference",
+  "theme": "aspen",
+  "primaryColor": "#7C3AED",
+  "lightColor": "#A78BFA",
+  "darkColor": "#5B21B6",
+  "navigation": {
+    "tabs": [
+      {
+        "tab": "Documentation",
+        "groups": [
+          {
+            "group": "Get Started",
+            "pages": [
+              "introduction",
+              "installation",
+              "quickstart"
+            ]
+          },
+          {
+            "group": "Language Guide",
+            "pages": [
+              "language/syntax",
+              "language/types",
+              "language/functions",
+              "language/pattern-matching",
+              "language/type-system",
+              "language/algebraic-data-types",
+              "language/io-and-effects"
+            ]
+          },
+          {
+            "group": "Standard Library",
+            "pages": [
+              "stdlib/overview",
+              "stdlib/prelude",
+              "stdlib/list",
+              "stdlib/string",
+              "stdlib/option",
+              "stdlib/result"
+            ]
+          },
+          {
+            "group": "Compiler",
+            "pages": [
+              "compiler/architecture",
+              "compiler/pipeline",
+              "compiler/cli-reference"
+            ]
+          },
+          {
+            "group": "Examples",
+            "pages": [
+              "examples/hello-world",
+              "examples/recursion",
+              "examples/higher-order-functions",
+              "examples/data-types"
+            ]
+          }
+        ]
+      },
+      {
+        "tab": "Reference",
+        "groups": [
+          {
+            "group": "Advanced Topics",
+            "pages": [
+              "reference/type-inference",
+              "reference/jvm-interop",
+              "reference/compiler-internals"
+            ]
+          },
+          {
+            "group": "Community",
+            "pages": [
+              "community/contributing",
+              "community/roadmap"
+            ]
+          }
+        ]
+      }
+    ]
+  },
+  "keyFeatures": [
+    "Hindley-Milner type system with complete type inference",
+    "Structural pattern matching with exhaustiveness checking",
+    "Algebraic data types (sum types and product types)",
+    "Pure functions with explicit IO monad for side effects",
+    "JVM bytecode compilation with optional interpreter",
+    "Haskell-inspired functional syntax",
+    "Standard library with List, String, Option, Result types",
+    "Multi-pass compiler architecture"
+  ],
+  "publicApiSurface": [
+    "elara build <file> - Compile Elara source files to JVM bytecode",
+    "elara run <file> --target [interp|jvm] - Run Elara programs",
+    "def - Function and type signature declarations",
+    "let - Value and function bindings",
+    "type - Algebraic data type definitions",
+    "type alias - Type aliases",
+    "match...with - Pattern matching expressions",
+    "import - Module imports",
+    "IO () - IO monad for effectful computations",
+    "List, Option, Result, String - Core standard library types"
+  ]
+}
